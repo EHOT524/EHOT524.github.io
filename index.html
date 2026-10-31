@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Физические опыты для школьников: меняй условия и смотри, что произойдёт.">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+</style>
+<title>Физика руками</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Макет: лист миллиметровки. Опыт занимает главное место, числа стоят рядом как записи в лабораторном журнале. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --grid: #f2c7a0; --grid-bold: #e9a56c; --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --ghost: #8fa3b6;
+  --water: #bcdcf5; --solid: #c98a4b; --good: #1d8a5f;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --grid: #3d3324; --grid-bold: #6b5230; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --ghost: #66798c;
+  --water: #1f4464; --solid: #b57a3e; --good: #4fd19c;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --grid: #3d3324; --grid-bold: #6b5230; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --ghost: #66798c;
+  --water: #1f4464; --solid: #b57a3e; --good: #4fd19c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 56px; display: grid; gap: 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); font-weight: 700; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(30px, 6.5vw, 52px); line-height: 1.08; letter-spacing: -0.02em; }
+h2 { font-size: 15px; font-weight: 500; }
+p { margin: 0; max-width: 62ch; }
+.lead { color: var(--muted); font-size: 18px; margin-top: 12px; }
+.note { color: var(--muted); font-size: 15px; margin-top: 8px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.group { display: grid; gap: 10px; }
+.group h2 { color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.card { display: grid; gap: 4px; padding: 14px 16px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  color: inherit; text-decoration: none; min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.card b { font-weight: 600; font-size: 17px; }
+.card span { color: var(--muted); font-size: 14px; }
+
+.back { font-weight: 600; text-decoration: none; }
+.lab { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.stage { display: grid; gap: 10px; min-width: 0; }
+canvas { display: block; width: 100%; aspect-ratio: 16 / 10; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; touch-action: pan-y; }
+.reads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.read { background: var(--sheet); padding: 8px 10px; min-width: 0; }
+.read span { display: block; color: var(--muted); font-size: 12px; }
+.read b { font: 500 18px/1.3 var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.panel { display: grid; gap: 16px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.field { display: grid; gap: 4px; }
+.field label { font-weight: 500; }
+.field small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.entry { display: flex; align-items: center; gap: 6px; flex: none; color: var(--muted); font-size: 14px; }
+.entry input { width: 74px; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; text-align: right; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; }
+.entry input[aria-invalid="true"] { border-color: var(--hit); }
+input[type=range] { width: 100%; height: 32px; accent-color: var(--accent); margin: 0; }
+select { width: 100%; font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 9px; }
+.check { display: flex; gap: 8px; align-items: center; }
+.btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+.scales { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.scales span { color: var(--muted); font-size: 14px; margin-right: 4px; }
+.scales button { padding: 7px 10px; font-size: 14px; border-color: var(--line); color: var(--ink); }
+.scales button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.notes h2 { margin-bottom: 8px; }
+.formula { font: 400 15px/1.8 var(--mono); }
+.notes ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+@media (max-width: 820px) {
+  .lab { grid-template-columns: minmax(0, 1fr); }
+  .reads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Физика руками</h1>
+    <p class="lead">Меняй условия опыта и сразу смотри, что произойдёт. Здесь можно проверить формулу из учебника своими глазами.</p>
+  </header>
+  <div class="wrap" id="catalog" style="padding:0;gap:24px"></div>
+</main>
+
+<main class="wrap" id="lab" hidden>
+  <a class="back" href="#home">← Все опыты</a>
+  <h1 id="title"></h1>
+  <div class="lab">
+    <div class="stage">
+      <div class="scales" id="scales" role="group" aria-label="Масштаб опыта" hidden></div>
+      <canvas id="sky" role="img"></canvas>
+      <div class="reads" id="reads"></div>
+    </div>
+    <form class="panel" id="controls"></form>
+  </div>
+  <section class="notes">
+    <div><h2>Формулы</h2><p class="formula" id="formulas"></p><p class="note" id="remark"></p></div>
+    <div><h2>Попробуй сам</h2><ol id="tasks"></ol></div>
+  </section>
+</main>
+
+<script>
+const num = (x, d = 1) => x.toFixed(d).replace(".", ",");
+const smart = x => num(x, Math.abs(x) >= 100 ? 0 : Math.abs(x) >= 10 ? 1 : 2);
+const $ = id => document.getElementById(id);
+const shown = n => String(n).replace(".", ",");
+const parse = text => Number(text.trim().replace(",", "."));
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+const distance = m => m >= 10000 ? num(m / 1000) + " км" : num(m) + " м";
+const R_GAS = 8.31;
+const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const sky = $("sky"), ctx = sky.getContext("2d");
+const color = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+let active = null, vals = {}, frame = 0, started = 0;
+
+// ---------- рисование ----------
+
+function line(x1, y1, x2, y2, style, width = 2, dash = []) {
+  ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function arrow(x1, y1, x2, y2, style, width = 2) {
+  const a = Math.atan2(y2 - y1, x2 - x1);
+  line(x1, y1, x2, y2, style, width);
+  ctx.fillStyle = style;
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - 9 * Math.cos(a - 0.4), y2 - 9 * Math.sin(a - 0.4));
+  ctx.lineTo(x2 - 9 * Math.cos(a + 0.4), y2 - 9 * Math.sin(a + 0.4));
+  ctx.fill();
+}
+
+function dot(x, y, r, style) {
+  ctx.fillStyle = style;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+}
+
+function label(text, x, y, style = color("--ink"), size = 12) {
+  ctx.fillStyle = style;
+  ctx.font = `${size}px ${color("--mono")}`;
+  ctx.fillText(text, x, y);
+}
+
+function paper(w, h, cell = 18) {
+  for (let i = 0; i * cell <= w; i++) {
+    ctx.globalAlpha = i % 5 ? 0.35 : 0.8;
+    line(i * cell, 0, i * cell, h, color(i % 5 ? "--grid" : "--grid-bold"), 1);
+  }
+  for (let i = 0; i * cell <= h; i++) {
+    ctx.globalAlpha = i % 5 ? 0.35 : 0.8;
+    line(0, i * cell, w, i * cell, color(i % 5 ? "--grid" : "--grid-bold"), 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function niceStep(span) {
+  const raw = span / 8, power = 10 ** Math.floor(Math.log10(raw)), m = raw / power;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * power;
+}
+
+// ---------- бросок под углом ----------
+
+function flight(v0, a, h, g) {
+  const vx = v0 * Math.cos(rad(a)), vy = v0 * Math.sin(rad(a));
+  const T = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g;
+  return { v0, a, h, g, vx, vy, T, L: vx * T, H: h + vy * vy / (2 * g), end: Math.sqrt(v0 * v0 + 2 * g * h) };
+}
+const at = (f, t) => ({ x: f.vx * t, y: f.h + f.vy * t - f.g * t * t / 2, ux: f.vx, uy: f.vy - f.g * t });
+let past = [];
+
+function drawFlight(w, h, v, f, ball) {
+  const left = 34, bottom = 24, top = 12, right = 12, all = [f, ...past];
+  const spanX = Math.max(...all.map(x => x.L)) * 1.08, spanY = Math.max(...all.map(x => x.H)) * 1.12;
+  const k = Math.min((w - left - right) / spanX, (h - top - bottom) / spanY);  // один масштаб: угол на экране настоящий
+  const X = x => left + x * k, Y = y => h - bottom - y * k;
+  const step = niceStep((w - left - right) / k), km = step >= 1000;
+  const mark = x => String(Math.round(x / (km ? 1000 : 1) * 100) / 100).replace(".", ",");
+  for (let i = 0; X(i * step / 5) <= w; i++) {
+    ctx.globalAlpha = i % 5 ? 0.45 : 1;
+    line(X(i * step / 5), 0, X(i * step / 5), h - bottom, color(i % 5 ? "--grid" : "--grid-bold"), 1);
+    ctx.globalAlpha = 1;
+    if (i % 5 === 0) label(mark(i * step / 5), X(i * step / 5) + 3, h - 8, color("--muted"), 11);
+  }
+  for (let i = 0; Y(i * step / 5) >= 0; i++) {
+    ctx.globalAlpha = i % 5 ? 0.45 : 1;
+    line(left, Y(i * step / 5), w, Y(i * step / 5), color(i % 5 ? "--grid" : "--grid-bold"), 1);
+    ctx.globalAlpha = 1;
+    if (i % 5 === 0 && i) label(mark(i * step / 5), 4, Y(i * step / 5) + 4, color("--muted"), 11);
+  }
+  line(left, Y(0), w, Y(0), color("--ink"));
+  label(km ? "км" : "м", 4, h - 8, color("--muted"), 11);
+  const path = (x, style, dash) => {
+    ctx.strokeStyle = style; ctx.lineWidth = 2; ctx.setLineDash(dash);
+    ctx.beginPath();
+    for (let i = 0; i <= 80; i++) { const p = at(x, x.T * i / 80); i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)); }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  past.forEach(x => path(x, color("--ghost"), []));
+  path(f, color("--accent"), [6, 5]);
+  if (f.h) { ctx.fillStyle = color("--ghost"); ctx.fillRect(X(0) - 5, Y(f.h), 5, f.h * k); }
+  dot(X(at(f, f.vy / f.g).x), Y(f.H), 3, color("--accent"));
+  const b = ball || at(f, 0), size = Math.min(w, h) * 0.2 / Math.max(f.v0, f.end);
+  if (v.vec && Math.hypot(b.ux, b.uy) > 0) arrow(X(b.x), Y(b.y), X(b.x) + b.ux * size, Y(b.y) - b.uy * size, color("--hit"));
+  dot(X(b.x), Y(b.y), 6, color("--ink"));
+}
+
+function launch() {
+  cancelAnimationFrame(frame);
+  const f = active.compute(vals), start = performance.now(), speed = Math.max(1, f.T / 4);  // долгий полёт ускоряем
+  const finish = () => { paint(0, at(f, f.T)); past = [f, ...past.filter(x => x !== f)].slice(0, 4); };
+  if (reduced()) return finish();
+  const tick = now => {
+    const t = (now - start) / 1000 * speed;
+    if (t >= f.T) return finish();
+    paint(0, at(f, t));
+    frame = requestAnimationFrame(tick);
+  };
+  frame = requestAnimationFrame(tick);
+}
+
+// ---------- маятники ----------
+
+function pendulum(v) {
+  if (v.kind === "thread") {
+    const T = 2 * Math.PI * Math.sqrt(v.l / v.g);
+    return { T, f: 1 / T, w: 2 * Math.PI / T, max: Math.sqrt(2 * v.g * v.l * (1 - Math.cos(rad(v.amp)))) };
+  }
+  const T = 2 * Math.PI * Math.sqrt(v.m / v.k), w = 2 * Math.PI / T;
+  return { T, f: 1 / T, w, max: w * v.x / 100 };
+}
+
+function drawPendulum(w, h, v, r, t) {
+  paper(w, h);
+  const swing = Math.cos(r.w * t), cx = w / 2;
+  line(cx - 50, 18, cx + 50, 18, color("--ink"), 3);
+  if (v.kind === "thread") {
+    const L = 50 + (h - 95) * Math.sqrt(v.l / +$("r_l").max), a = rad(v.amp) * swing, max = rad(v.amp);
+    line(cx, 18, cx, 18 + L, color("--ghost"), 1, [4, 4]);
+    line(cx, 18, cx + L * Math.sin(max), 18 + L * Math.cos(max), color("--ghost"), 1, [4, 4]);
+    line(cx, 18, cx - L * Math.sin(max), 18 + L * Math.cos(max), color("--ghost"), 1, [4, 4]);
+    const x = cx + L * Math.sin(a), y = 18 + L * Math.cos(a);
+    line(cx, 18, x, y, color("--ink"));
+    dot(x, y, 13, color("--accent"));
+    return;
+  }
+  const rest = h * 0.5, bottom = rest + v.x / +$("r_x").max * 60 * swing, turns = 12;
+  ctx.strokeStyle = color("--ink"); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, 18);
+  for (let i = 1; i <= turns; i++) ctx.lineTo(cx + (i % 2 ? 12 : -12), 18 + (bottom - 18) * i / (turns + 1));
+  ctx.lineTo(cx, bottom); ctx.stroke();
+  const side = 26 + 26 * Math.cbrt(v.m / +$("r_m").max);
+  ctx.fillStyle = color("--solid");
+  ctx.fillRect(cx - side / 2, bottom, side, side);
+  line(cx - 80, rest + side / 2, cx + 80, rest + side / 2, color("--ghost"), 1, [4, 4]);
+}
+
+// ---------- сила Архимеда ----------
+
+function archimedes(v) {
+  const m = v.rho * v.vol / 1000, gravity = 10 * m, full = v.liquid * 10 * v.vol / 1000, floats = v.rho < v.liquid;
+  return { m, gravity, floats, push: floats ? gravity : full, share: floats ? v.rho / v.liquid : 1, weight: floats ? 0 : gravity - full };
+}
+
+function drawArchimedes(w, h, v, r) {
+  const surface = h * 0.3, floor = h - 14, tank = Math.min(w * 0.7, 420), x0 = (w - tank) / 2;
+  ctx.fillStyle = color("--water");
+  ctx.fillRect(x0, surface, tank, floor - surface);
+  line(x0, 14, x0, floor, color("--ink")); line(x0 + tank, 14, x0 + tank, floor, color("--ink")); line(x0, floor, x0 + tank, floor, color("--ink"));
+  const side = 34 + 62 * Math.cbrt(v.vol / +$("r_vol").max), cx = w / 2;
+  const top = r.floats ? surface - side * (1 - r.share) : floor - side;
+  ctx.fillStyle = color("--solid");
+  ctx.fillRect(cx - side / 2, top, side, side);
+  const most = Math.max(r.gravity, r.push), mid = top + side / 2, size = Math.min(h * 0.3, mid - 22, floor - mid - 6) / most;
+  arrow(cx - 12, mid, cx - 12, mid + r.gravity * size, color("--hit"), 3);
+  arrow(cx + 12, mid, cx + 12, mid - r.push * size, color("--good"), 3);
+  label("mg", cx - 40, mid + r.gravity * size, color("--hit"), 13);
+  label("Fₐ", cx + 20, mid - r.push * size + 10, color("--good"), 13);
+  label(r.floats ? "тело плавает" : v.rho === v.liquid ? "тело лежит" : "тело утонуло", x0 + 8, surface + 18, color("--ink"), 12);
+}
+
+// ---------- газ ----------
+
+function gas(v) {
+  const p = v.proc === "p" ? v.p : v.nu * R_GAS * v.T / v.V;           // кПа при объёме в литрах
+  const V = v.proc === "p" ? v.nu * R_GAS * v.T / v.p : v.V;
+  return { p, V, T: v.T, U: 1.5 * v.nu * R_GAS * v.T };
+}
+
+function drawGas(w, h, v, r, t) {
+  const box = w * 0.36, x0 = 16, floor = h - 16, tall = h - 44;
+  const Vmax = Math.max(+$("r_V").max, r.V * 1.25), piston = floor - tall * r.V / Vmax;
+  line(x0, 16, x0, floor, color("--ink")); line(x0 + box, 16, x0 + box, floor, color("--ink")); line(x0, floor, x0 + box, floor, color("--ink"));
+  ctx.fillStyle = color("--ghost");
+  ctx.fillRect(x0 + 2, piston - 8, box - 4, 8);
+  // Рисуем не больше 200 молекул, а скорость ограничиваем: иначе на больших числах картинка мельтешит и тормозит
+  const count = Math.min(200, Math.round(20 + 16 * v.nu)), speed = Math.min(12, Math.sqrt(r.T) / 12), room = floor - piston - 10;
+  for (let i = 0; i < count; i++) {
+    const a = Math.abs(Math.sin(i * 12.9 + t * speed * (0.6 + (i % 5) * 0.2)));
+    const b = Math.abs(Math.sin(i * 78.2 + t * speed * (0.5 + (i % 7) * 0.17)));
+    dot(x0 + 6 + a * (box - 12), piston + 6 + b * room, 2.5, color("--accent"));
+  }
+  const gx = x0 + box + 44, gw = w - gx - 14, gy = h - 30, gh = h - 46;
+  const Pmax = Math.max(r.p * 1.6, 100), pX = V => gx + gw * V / Vmax, pY = p => gy - gh * Math.min(p / Pmax, 1);
+  line(gx, 10, gx, gy, color("--ink")); line(gx, gy, gx + gw, gy, color("--ink"));
+  label("p, кПа", gx + gw - 44, 20, color("--muted"), 11);
+  label("V, л", gx + gw - 26, gy + 16, color("--muted"), 11);
+  label(smart(Pmax), gx - 34, pY(Pmax) + 8, color("--muted"), 11);
+  label(smart(Vmax), gx + gw - 26, gy - 4, color("--muted"), 11);
+  ctx.strokeStyle = color("--accent"); ctx.lineWidth = 2; ctx.beginPath();
+  if (v.proc === "T") {
+    const start = v.nu * R_GAS * v.T / Pmax;  // кривая начинается там, где входит в график
+    for (let i = 0; i <= 60; i++) {
+      const V = start + (Vmax - start) * i / 60, p = v.nu * R_GAS * v.T / V;
+      i ? ctx.lineTo(pX(V), pY(p)) : ctx.moveTo(pX(V), pY(p));
+    }
+  } else if (v.proc === "p") { ctx.moveTo(gx, pY(r.p)); ctx.lineTo(gx + gw, pY(r.p)); }
+  else { ctx.moveTo(pX(r.V), gy); ctx.lineTo(pX(r.V), pY(Pmax)); }
+  ctx.stroke();
+  dot(pX(r.V), pY(r.p), 6, color("--hit"));
+}
+
+// ---------- закон Ома ----------
+
+function ohm(v) {
+  const R = v.conn === "one" ? v.r1 : v.conn === "ser" ? v.r1 + v.r2 : v.r1 * v.r2 / (v.r1 + v.r2);
+  const I = v.emf / (R + v.inner), U = I * R;
+  return { R, I, U, P: U * I, i1: v.conn === "par" ? U / v.r1 : I, i2: v.conn === "par" ? U / v.r2 : I,
+    u1: v.conn === "par" ? U : I * v.r1, u2: v.conn === "par" ? U : I * v.r2 };
+}
+
+function resistor(cx, cy, name) {
+  ctx.fillStyle = color("--sheet");
+  ctx.fillRect(cx - 28, cy - 10, 56, 20);
+  ctx.strokeStyle = color("--ink"); ctx.lineWidth = 2;
+  ctx.strokeRect(cx - 28, cy - 10, 56, 20);
+  label(name, cx - 8, cy + 4, color("--ink"), 12);
+}
+
+function drawOhm(w, h, v, r, t) {
+  paper(w, h);
+  const x1 = w * 0.12, x2 = w * 0.88, y1 = h * 0.22, y2 = h * 0.8, mid = (x1 + x2) / 2, ink = color("--ink");
+  line(x1, y1, x2, y1, ink); line(x2, y1, x2, y2, ink); line(x1, y1, x1, y2, ink);
+  line(x1, y2, mid - 8, y2, ink); line(mid + 8, y2, x2, y2, ink);
+  line(mid - 8, y2 - 16, mid - 8, y2 + 16, ink, 3); line(mid + 8, y2 - 8, mid + 8, y2 + 8, ink, 3);
+  label(`ℰ = ${shown(v.emf)} В`, mid - 40, y2 + 34 > h ? y2 - 22 : y2 + 34);
+  const span = 2 * ((x2 - x1) + (y2 - y1)), speed = Math.min(160, 14 + r.I * 22);
+  for (let i = 0; i < 14; i++) {
+    let s = (i * span / 14 + t * speed) % span, x, y;
+    if (s < x2 - x1) { x = x1 + s; y = y1; }
+    else if ((s -= x2 - x1) < y2 - y1) { x = x2; y = y1 + s; }
+    else if ((s -= y2 - y1) < x2 - x1) { x = x2 - s; y = y2; }
+    else { s -= x2 - x1; x = x1; y = y2 - s; }
+    dot(x, y, 3.5, color("--hit"));
+  }
+  if (v.conn === "one") resistor(mid, y1, "R₁");
+  if (v.conn === "ser") { resistor(mid - w * 0.18, y1, "R₁"); resistor(mid + w * 0.18, y1, "R₂"); }
+  if (v.conn === "par") {
+    const y3 = y1 + (y2 - y1) * 0.45, a = mid - w * 0.2, b = mid + w * 0.2;
+    line(a, y1, a, y3, ink); line(b, y1, b, y3, ink); line(a, y3, b, y3, ink);
+    resistor(mid, y1, "R₁"); resistor(mid, y3, "R₂");
+    dot(a, y1, 3, ink); dot(b, y1, 3, ink);
+  }
+  label(`I = ${smart(r.I)} А`, x1 + 8, y1 - 16, color("--hit"), 12);
+}
+
+// ---------- линза ----------
+
+function lens(v) {
+  const F = v.type === "in" ? -v.F : v.F;
+  if (Math.abs(v.d - F) < 1e-9) return { F, f: Infinity, zoom: Infinity, real: null };
+  const f = v.d * F / (v.d - F);
+  return { F, f, zoom: Math.abs(f / v.d), real: f > 0, height: v.h * -f / v.d };
+}
+
+function drawLens(w, h, v, r) {
+  paper(w, h);
+  const mid = h / 2, finite = Number.isFinite(r.f), far = Math.max(v.d, Math.abs(v.F) * 1.3, finite ? Math.min(Math.abs(r.f), 3 * v.d) : 0);
+  const k = (w / 2 - 24) / far, unit = Math.min(k, (h / 2 - 16) / Math.max(v.h * 1.05, finite ? Math.min(Math.abs(r.height), v.h * 6) : v.h));
+  const cx = w / 2, X = x => cx + x * k, Y = y => mid - y * unit;
+  line(0, mid, w, mid, color("--ink"), 1);
+  ctx.strokeStyle = color("--accent"); ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx, 10); ctx.lineTo(cx, h - 10); ctx.stroke();
+  [[10, 1], [h - 10, -1]].forEach(([y, s]) => {
+    const tip = v.type === "in" ? -1 : 1;
+    line(cx, y, cx - 7, y + s * 8 * tip, color("--accent"), 2);
+    line(cx, y, cx + 7, y + s * 8 * tip, color("--accent"), 2);
+  });
+  [v.F, -v.F].forEach(x => { dot(X(x), mid, 3, color("--ink")); label("F", X(x) - 3, mid + 16, color("--muted"), 12); });
+  arrow(X(-v.d), mid, X(-v.d), Y(v.h), color("--hit"), 3);
+  const end = (x0, y0, x1, y1, t) => [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t];
+  const ray = color("--good");
+  // Луч параллельно оси и луч через центр линзы
+  line(X(-v.d), Y(v.h), X(0), Y(v.h), ray);
+  const focus = [r.F, 0], a = end(0, v.h, focus[0], focus[1], 20 * Math.sign(r.F));
+  line(X(0), Y(v.h), X(a[0]), Y(a[1]), ray);
+  const b = end(-v.d, v.h, 0, 0, 40);
+  line(X(-v.d), Y(v.h), X(b[0]), Y(b[1]), ray);
+  if (finite) {
+    if (!r.real) {
+      line(X(0), Y(v.h), X(r.f), Y(r.height), ray, 1, [5, 5]);
+      line(X(0), Y(0), X(r.f), Y(r.height), ray, 1, [5, 5]);
+    }
+    if (Math.abs(r.height) <= v.h * 6 && Math.abs(r.f) <= 3 * v.d) arrow(X(r.f), mid, X(r.f), Y(r.height), color("--ink"), 3);
+  }
+}
+
+// ---------- преломление ----------
+
+function refraction(v) {
+  const n1 = v.n1 === "own" ? v.own1 : +v.n1, n2 = v.n2 === "own" ? v.own2 : +v.n2;
+  const sine = n1 / n2 * Math.sin(rad(v.angle)), total = sine >= 1;
+  return { n1, n2, total, angle: total ? null : deg(Math.asin(sine)), limit: n1 > n2 ? deg(Math.asin(n2 / n1)) : null };
+}
+
+function drawRefraction(w, h, v, r) {
+  const cx = w / 2, cy = h / 2, len = Math.hypot(w, h);
+  ctx.fillStyle = color("--water");
+  ctx.fillRect(0, cy, w, h - cy);
+  line(0, cy, w, cy, color("--ink"));
+  line(cx, 0, cx, h, color("--ghost"), 1, [5, 5]);
+  const a = rad(v.angle), ray = color("--hit");
+  arrow(cx - len * Math.sin(a), cy - len * Math.cos(a), cx - 40 * Math.sin(a), cy - 40 * Math.cos(a), ray);
+  line(cx - 40 * Math.sin(a), cy - 40 * Math.cos(a), cx, cy, ray);
+  ctx.globalAlpha = r.total ? 1 : 0.35;
+  line(cx, cy, cx + len * Math.sin(a), cy - len * Math.cos(a), ray);
+  ctx.globalAlpha = 1;
+  if (!r.total) { const b = rad(r.angle); line(cx, cy, cx + len * Math.sin(b), cy + len * Math.cos(b), ray); }
+  label(`n₁ = ${shown(r.n1)}`, 10, 20);
+  label(`n₂ = ${shown(r.n2)}`, 10, h - 12);
+  label(`${num(v.angle, 0)}°`, cx - 44, cy - 58 > 12 ? cy - 58 : 16, color("--muted"));
+  if (r.total) label("полное внутреннее отражение", 10, cy - 10, color("--hit"));
+  else label(`${num(r.angle)}°`, cx - 52, cy + 40, color("--muted"));
+}
+
+// ---------- распад ----------
+
+let lives = [], sortedLives = new Float64Array();
+function seedDecay(v) {
+  lives = Array.from({ length: v.n }, () => -v.half * Math.log2(1 - Math.random()));
+  sortedLives = Float64Array.from(lives).sort();  // по отсортированному списку ядра считаются сразу, без перебора
+}
+
+function aliveAt(time) {
+  let low = 0, high = sortedLives.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (sortedLives[mid] > time) high = mid; else low = mid + 1;
+  }
+  return sortedLives.length - low;
+}
+
+function decay(v, t) {
+  const time = Math.min(t * Math.max(1, v.half / 5), 6 * v.half), left = aliveAt(time);  // долгий распад ускоряем
+  return { time, left, theory: v.n * 2 ** (-time / v.half), done: v.n - left };
+}
+
+function drawDecay(w, h, v, r) {
+  // Ядра случайны, поэтому первые 2500 показывают ту же картину, что и все
+  const shownLives = lives.slice(0, 2500), side = Math.min(w * 0.42, h - 24), cols = Math.ceil(Math.sqrt(shownLives.length)), cell = side / cols, x0 = 12, y0 = (h - side) / 2;
+  shownLives.forEach((life, i) => {
+    ctx.fillStyle = color(life > r.time ? "--accent" : "--line");
+    ctx.fillRect(x0 + (i % cols) * cell, y0 + Math.floor(i / cols) * cell, Math.max(cell - 1, 1), Math.max(cell - 1, 1));
+  });
+  const gx = x0 + side + 40, gw = w - gx - 12, gy = h - 26, gh = h - 44, span = 6 * v.half;
+  const X = t => gx + gw * t / span, Y = n => gy - gh * n / v.n;
+  line(gx, 10, gx, gy, color("--ink")); line(gx, gy, gx + gw, gy, color("--ink"));
+  label("N", gx - 14, 20, color("--muted"), 11);
+  label("t", gx + gw - 8, gy + 16, color("--muted"), 11);
+  ctx.strokeStyle = color("--accent"); ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i <= 60; i++) { const t = span * i / 60, n = v.n * 2 ** (-t / v.half); i ? ctx.lineTo(X(t), Y(n)) : ctx.moveTo(X(t), Y(n)); }
+  ctx.stroke();
+  for (let k = 1; k <= 3; k++) line(X(k * v.half), gy, X(k * v.half), Y(v.n * 2 ** -k), color("--ghost"), 1, [3, 4]);
+  dot(X(r.time), Y(r.left), 5, color("--hit"));
+}
+
+// ---------- опыты ----------
+
+const PLANETS = [["10", "Земля, g = 10 м/с²"], ["3.7", "Марс, g = 3,7 м/с²"], ["1.6", "Луна, g = 1,6 м/с²"]];
+const MEDIA = [["1", "Воздух, n = 1"], ["1.33", "Вода, n = 1,33"], ["1.5", "Стекло, n = 1,5"], ["2.42", "Алмаз, n = 2,42"], ["own", "Свой показатель"]];
+const SIMS = {
+  brosok: {
+    title: "Бросок под углом", section: "Механика", brief: "Дальность, высота и время полёта",
+    fields: [
+      { id: "v0", label: "Начальная скорость", unit: "м/с", min: 1, max: 40, top: 1000, step: 1, value: 20 },
+      { id: "a", label: "Угол к горизонту", unit: "°", min: 5, max: 85, step: 1, value: 45 },
+      { id: "h0", label: "Высота броска", unit: "м", min: 0, max: 30, top: 5000, step: 1, value: 0 },
+    ],
+    selects: [{ id: "g", label: "Где бросаем", options: PLANETS, number: true }],
+    checks: [{ id: "vec", label: "Показывать вектор скорости", value: true }],
+    // Масштаб задаёт только пределы ползунков: траектория всегда из 80 точек, поэтому большие числа не тормозят
+    scales: [
+      { text: "до 40 м/с", v0: [40, 1], h0: [30, 1] }, { text: "до 100 м/с", v0: [100, 1], h0: [200, 5] },
+      { text: "до 300 м/с", v0: [300, 5], h0: [1000, 10] }, { text: "до 1000 м/с", v0: [1000, 10], h0: [5000, 50] },
+    ],
+    action: { text: "Бросить", run: launch }, extra: { text: "Очистить", run() { past = []; update(); } },
+    compute: v => flight(v.v0, v.a, v.h0, v.g),
+    reads: f => [["Дальность", distance(f.L)], ["Наибольшая высота", distance(f.H)],
+      ["Время полёта", num(f.T, f.T >= 100 ? 1 : 2) + " с"], ["Скорость в конце", num(f.end) + " м/с"]],
+    draw: drawFlight, describe: "Траектория тела, брошенного под углом к горизонту",
+    formulas: ["x = υ₀ · cos α · t", "y = h + υ₀ · sin α · t − g · t² / 2", "H = h + (υ₀ · sin α)² / (2g)", "L = υ₀² · sin 2α / g, если h = 0"],
+    remark: "Сопротивление воздуха не учитываем, как в школьных задачах. На настоящих больших скоростях тело улетело бы гораздо ближе.",
+    tasks: ["При h = 0 брось под 30°, а затем под 60°. Сравни дальность.", "Найди угол с наибольшей дальностью при h = 0. Изменится ли он при h = 20 м?",
+      "Увеличь скорость вдвое. Во сколько раз выросла дальность?"],
+  },
+  mayatnik: {
+    title: "Маятники", section: "Механика", brief: "Период нити и пружины", live: true,
+    fields: [
+      { id: "l", label: "Длина нити", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind === "thread" },
+      { id: "amp", label: "Угол отклонения", unit: "°", min: 1, max: 60, step: 1, value: 20, when: v => v.kind === "thread" },
+      { id: "m", label: "Масса груза", unit: "кг", min: 0.1, max: 5, step: 0.1, value: 1, when: v => v.kind === "spring" },
+      { id: "k", label: "Жёсткость пружины", unit: "Н/м", min: 1, max: 500, step: 1, value: 40, when: v => v.kind === "spring" },
+      { id: "x", label: "Амплитуда", unit: "см", min: 1, max: 30, step: 1, value: 15, when: v => v.kind === "spring" },
+    ],
+    selects: [
+      { id: "kind", label: "Какой маятник", options: [["thread", "Математический, на нити"], ["spring", "Пружинный"]], first: true },
+      { id: "g", label: "Где находится", options: PLANETS, number: true, when: v => v.kind === "thread" },
+    ],
+    compute: pendulum,
+    reads: r => [["Период", smart(r.T) + " с"], ["Частота", smart(r.f) + " Гц"], ["Циклическая частота", smart(r.w) + " рад/с"], ["Наибольшая скорость", smart(r.max) + " м/с"]],
+    draw: drawPendulum, describe: "Колеблющийся маятник",
+    formulas: ["T = 2π · √(l / g)", "T = 2π · √(m / k)", "ν = 1 / T", "ω = 2π / T"],
+    remark: "Формула математического маятника точна при малых углах. При больших углах настоящий период немного больше.",
+    tasks: ["Увеличь длину нити в 4 раза. Во сколько раз вырос период?", "Отправь маятник на Луну. Как изменился период?", "У пружинного маятника увеличь массу в 4 раза при той же жёсткости. Что стало с периодом?"],
+  },
+  arhimed: {
+    title: "Сила Архимеда", section: "Механика", brief: "Тело в жидкости",
+    fields: [
+      { id: "rho", label: "Плотность тела", unit: "кг/м³", min: 100, max: 11000, step: 50, value: 400 },
+      { id: "vol", label: "Объём тела", unit: "дм³", min: 0.1, max: 20, step: 0.1, value: 5 },
+    ],
+    selects: [{ id: "liquid", label: "Жидкость", number: true, options: [["1000", "Вода, 1000 кг/м³"], ["800", "Керосин, 800 кг/м³"], ["900", "Масло, 900 кг/м³"], ["1030", "Морская вода, 1030 кг/м³"], ["13600", "Ртуть, 13 600 кг/м³"]] }],
+    compute: archimedes,
+    reads: r => [["Сила тяжести", smart(r.gravity) + " Н"], ["Сила Архимеда", smart(r.push) + " Н"], ["Вес в жидкости", smart(r.weight) + " Н"], ["Погружено", num(r.share * 100, 0) + "%"]],
+    draw: drawArchimedes, describe: "Тело в сосуде с жидкостью и действующие на него силы",
+    formulas: ["Fₐ = ρж · g · Vпт", "mg = ρт · V · g", "Vпт / V = ρт / ρж, если тело плавает"],
+    remark: "Считаем g = 10 м/с². Плотности: дерево 400, лёд 900, алюминий 2700, железо 7800, свинец 11 350 кг/м³.",
+    tasks: ["Какая часть льда с плотностью 900 кг/м³ погружена в воду?", "Опусти железо с плотностью 7800 кг/м³ в воду, а затем в ртуть. Что изменилось?", "Найди плотность, при которой тело лежит на границе между плаванием и утоплением."],
+  },
+  gaz: {
+    title: "Изопроцессы в газе", section: "Молекулярная физика", brief: "Давление, объём и температура", live: true,
+    fields: [
+      { id: "nu", label: "Количество газа", unit: "моль", min: 0.1, max: 5, step: 0.1, value: 1 },
+      { id: "T", label: "Температура", unit: "К", min: 100, max: 800, step: 10, value: 300 },
+      { id: "V", label: "Объём", unit: "л", min: 1, max: 50, step: 1, value: 25, when: v => v.proc !== "p" },
+      { id: "p", label: "Давление", unit: "кПа", min: 50, max: 500, step: 10, value: 100, when: v => v.proc === "p" },
+    ],
+    selects: [{ id: "proc", label: "Что остаётся постоянным", first: true, options: [["T", "Температура: изотермический"], ["p", "Давление: изобарный"], ["V", "Объём: изохорный"]] }],
+    compute: gas,
+    reads: r => [["Давление", smart(r.p) + " кПа"], ["Объём", smart(r.V) + " л"], ["Температура", num(r.T, 0) + " К"], ["Внутренняя энергия", smart(r.U / 1000) + " кДж"]],
+    draw: drawGas, describe: "Сосуд с газом и график давления от объёма",
+    formulas: ["p · V = ν · R · T", "p · V = const при T = const", "V / T = const при p = const", "p / T = const при V = const"],
+    remark: "Газ идеальный и одноатомный, R = 8,31 Дж/(моль·К). Внутренняя энергия U = 1,5 · ν · R · T.",
+    tasks: ["В изотермическом процессе уменьши объём вдвое. Что стало с давлением?", "В изобарном процессе увеличь температуру вдвое. Что стало с объёмом?", "В изохорном процессе измени температуру. Сдвинулся ли поршень?"],
+  },
+  om: {
+    title: "Закон Ома", section: "Электричество", brief: "Цепь с резисторами", live: true,
+    fields: [
+      { id: "emf", label: "ЭДС источника", unit: "В", min: 1, max: 100, step: 1, value: 12 },
+      { id: "inner", label: "Внутреннее сопротивление", unit: "Ом", min: 0, max: 10, step: 0.5, value: 1 },
+      { id: "r1", label: "Резистор R₁", unit: "Ом", min: 1, max: 100, step: 1, value: 4 },
+      { id: "r2", label: "Резистор R₂", unit: "Ом", min: 1, max: 100, step: 1, value: 6, when: v => v.conn !== "one" },
+    ],
+    selects: [{ id: "conn", label: "Соединение", first: true, value: "ser", options: [["one", "Один резистор"], ["ser", "Последовательное"], ["par", "Параллельное"]] }],
+    compute: ohm,
+    reads: r => [["Общее сопротивление", smart(r.R) + " Ом"], ["Сила тока", smart(r.I) + " А"], ["Напряжение на цепи", smart(r.U) + " В"], ["Мощность на цепи", smart(r.P) + " Вт"]],
+    draw: drawOhm, describe: "Электрическая цепь с источником и резисторами",
+    formulas: ["I = ℰ / (R + r)", "R = R₁ + R₂ при последовательном", "R = R₁ · R₂ / (R₁ + R₂) при параллельном", "P = U · I"],
+    remark: "Точки на схеме показывают направление тока от плюса к минусу. Чем больше ток, тем быстрее они движутся.",
+    tasks: ["Соедини два равных резистора последовательно, а потом параллельно. Во сколько раз изменилось сопротивление?", "Поставь внутреннее сопротивление 0 Ом. Чему равно напряжение на цепи?", "Найди R₁, при котором мощность наибольшая, если резистор один. Сравни с r."],
+  },
+  linza: {
+    title: "Линза", section: "Оптика", brief: "Построение изображения",
+    fields: [
+      { id: "F", label: "Фокусное расстояние", unit: "см", min: 5, max: 50, step: 1, value: 15 },
+      { id: "d", label: "Расстояние до предмета", unit: "см", min: 5, max: 100, step: 1, value: 30 },
+      { id: "h", label: "Высота предмета", unit: "см", min: 1, max: 10, step: 0.5, value: 4 },
+    ],
+    selects: [{ id: "type", label: "Какая линза", options: [["out", "Собирающая"], ["in", "Рассеивающая"]] }],
+    compute: lens,
+    reads: r => r.real === null
+      ? [["Расстояние до изображения", "нет"], ["Увеличение", "нет"], ["Высота изображения", "нет"], ["Изображение", "лучи параллельны"]]
+      : [["Расстояние до изображения", smart(Math.abs(r.f)) + " см"], ["Увеличение", smart(r.zoom)], ["Высота изображения", smart(Math.abs(r.height)) + " см"],
+        ["Изображение", (r.real ? "действительное" : "мнимое") + ", " + (r.height < 0 ? "перевёрнутое" : "прямое")]],
+    draw: drawLens, describe: "Построение изображения в тонкой линзе",
+    formulas: ["1 / d + 1 / f = 1 / F", "Γ = f / d", "D = 1 / F"],
+    remark: "У рассеивающей линзы фокус считается отрицательным, поэтому изображение всегда мнимое и уменьшенное. Сплошные линии показывают лучи, а пунктир их продолжения.",
+    tasks: ["Поставь предмет на расстояние 2F. Каким стало увеличение?", "Поставь предмет точно в фокус. Где изображение?", "Поставь предмет ближе фокуса. Какой линзой работает лупа?"],
+  },
+  prelomlenie: {
+    title: "Преломление света", section: "Оптика", brief: "Луч на границе сред",
+    fields: [
+      { id: "angle", label: "Угол падения", unit: "°", min: 0, max: 89, step: 1, value: 40 },
+      { id: "own1", label: "Показатель верхней среды", unit: "n₁", min: 1, max: 5, step: 0.01, value: 1.7, when: v => v.n1 === "own" },
+      { id: "own2", label: "Показатель нижней среды", unit: "n₂", min: 1, max: 5, step: 0.01, value: 1.7, when: v => v.n2 === "own" },
+    ],
+    selects: [
+      { id: "n1", label: "Верхняя среда", first: true, options: MEDIA },
+      { id: "n2", label: "Нижняя среда", first: true, value: "1.33", options: MEDIA },
+    ],
+    compute: refraction,
+    reads: (r, v) => [["Угол падения", num(v.angle, 0) + "°"], ["Угол отражения", num(v.angle, 0) + "°"], ["Угол преломления", r.total ? "нет" : num(r.angle) + "°"], ["Предельный угол", r.limit === null ? "нет" : num(r.limit) + "°"]],
+    draw: drawRefraction, describe: "Луч света на границе двух сред",
+    formulas: ["n₁ · sin α = n₂ · sin β", "sin αпр = n₂ / n₁, если n₁ > n₂", "n = c / υ"],
+    remark: "Полное внутреннее отражение бывает только при переходе в оптически менее плотную среду.",
+    tasks: ["Пусти луч из воздуха в воду и найди угол преломления при 45°.", "Поменяй среды местами и найди угол, после которого луч перестаёт выходить в воздух.", "Сравни предельный угол воды и алмаза. Почему алмаз так блестит?"],
+  },
+  raspad: {
+    title: "Радиоактивный распад", section: "Квантовая физика", brief: "Период полураспада", live: true,
+    fields: [
+      { id: "n", label: "Ядер в начале", unit: "шт", min: 10, max: 2000, step: 10, value: 400 },
+      { id: "half", label: "Период полураспада", unit: "с", min: 1, max: 20, step: 1, value: 4 },
+    ],
+    action: { text: "Запустить заново", run() { update(); } },
+    reset: seedDecay,
+    compute: decay,
+    reads: (r, v) => [["Прошло", num(r.time) + " с"], ["Осталось ядер", String(r.left)], ["По формуле", num(r.theory, 0)], ["Распалось", String(r.done)]],
+    draw: drawDecay, describe: "Распад ядер и график их числа от времени",
+    formulas: ["N = N₀ · 2^(−t / T)"],
+    remark: "Распад случаен: каждый запуск немного отличается от формулы. Чем больше ядер, тем точнее совпадение.",
+    tasks: ["Сколько ядер останется через один период полураспада? Через два?", "Запусти опыт с 10 ядрами и с 2000. Где точнее совпадение с формулой?", "Почему нельзя сказать, какое именно ядро распадётся следующим?"],
+  },
+};
+
+// Масштаб: те же опыты, но пределы ползунков в 10 и 100 раз больше. Вписанное большое число включает его само
+const GROW = {
+  mayatnik: ["l", "m", "k", "x"], arhimed: ["rho", "vol"], gaz: ["nu", "T", "V", "p"], om: ["emf", "inner", "r1", "r2"],
+  linza: ["F", "d", "h"], raspad: ["n", "half"],
+};
+Object.entries(GROW).forEach(([key, ids]) => {
+  const sim = SIMS[key], fields = sim.fields.filter(f => ids.includes(f.id));
+  fields.forEach(f => { f.top = f.max * 100; });
+  sim.scales = [["Обычный", 1], ["Большой", 10], ["Очень большой", 100]].map(([text, k]) => ({
+    text, ...Object.fromEntries(fields.map(f => [f.id, [f.max * k, f.step * k]])),
+  }));
+});
+
+// ---------- страница опыта ----------
+
+function buildControls(sim) {
+  const form = $("controls");
+  form.replaceChildren();
+  const selectNode = s => {
+    const box = document.createElement("div");
+    box.className = "field"; box.dataset.id = s.id;
+    box.innerHTML = `<label for="s_${s.id}">${s.label}</label><select id="s_${s.id}">${s.options.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>`;
+    const select = box.querySelector("select");
+    select.value = sim.state[s.id];
+    select.addEventListener("input", () => { vals[s.id] = s.number ? +select.value : select.value; syncVisible(); update(); });
+    return box;
+  };
+  (sim.selects || []).filter(s => s.first).forEach(s => form.append(selectNode(s)));
+  sim.fields.forEach(f => {
+    const box = document.createElement("div");
+    box.className = "field"; box.dataset.id = f.id;
+    box.innerHTML = `<div class="head"><label for="n_${f.id}">${f.label}<small id="h_${f.id}"></small></label>
+      <span class="entry"><input type="text" inputmode="decimal" id="n_${f.id}" autocomplete="off"> ${f.unit}</span></div>
+      <input type="range" id="r_${f.id}" aria-label="${f.label}">`;
+    form.append(box);
+    const slider = box.querySelector("[type=range]"), entry = box.querySelector("[type=text]"), top = f.top ?? f.max;
+    slider.min = f.min; slider.max = f.max; slider.step = f.step; slider.value = vals[f.id];
+    entry.value = shown(vals[f.id]);
+    $("h_" + f.id).textContent = `от ${shown(f.min)} до ${shown(f.max)}`;
+    slider.addEventListener("input", () => {
+      vals[f.id] = +slider.value;
+      entry.value = shown(vals[f.id]);
+      entry.removeAttribute("aria-invalid");
+      update();
+    });
+    // Пока ученик печатает, 1 на пути к 15 не должна сбрасываться: неверное число только подсвечиваем
+    entry.addEventListener("input", () => {
+      const n = parse(entry.value), ok = entry.value.trim() !== "" && n >= f.min && n <= top;
+      entry.setAttribute("aria-invalid", String(!ok));
+      if (!ok) return;
+      vals[f.id] = n;
+      fitScale();
+      slider.value = n;
+      update();
+    });
+    // Когда ввод закончен, число вне границ заменяем ближайшим допустимым
+    entry.addEventListener("change", () => {
+      const n = parse(entry.value);
+      if (entry.value.trim() !== "" && !Number.isNaN(n)) vals[f.id] = Math.min(top, Math.max(f.min, n));
+      fitScale();
+      entry.value = shown(vals[f.id]);
+      entry.removeAttribute("aria-invalid");
+      slider.value = vals[f.id];
+      update();
+    });
+  });
+  (sim.selects || []).filter(s => !s.first).forEach(s => form.append(selectNode(s)));
+  (sim.checks || []).forEach(c => {
+    const box = document.createElement("label");
+    box.className = "check";
+    box.innerHTML = `<input type="checkbox" id="c_${c.id}"> ${c.label}`;
+    const input = box.querySelector("input");
+    input.checked = vals[c.id];
+    input.addEventListener("input", () => { vals[c.id] = input.checked; update(); });
+    form.append(box);
+  });
+  if (sim.action || sim.extra) {
+    const row = document.createElement("div");
+    row.className = "btns";
+    if (sim.action) row.innerHTML += `<button type="submit" class="main">${sim.action.text}</button>`;
+    if (sim.extra) row.innerHTML += `<button type="button" id="extra">${sim.extra.text}</button>`;
+    form.append(row);
+    if (sim.extra) $("extra").addEventListener("click", sim.extra.run);
+  }
+  syncVisible();
+}
+
+function syncVisible() {
+  const all = [...active.fields, ...(active.selects || [])];
+  document.querySelectorAll("#controls .field").forEach(box => {
+    const item = all.find(x => x.id === box.dataset.id);
+    box.hidden = Boolean(item.when && !item.when(vals));
+  });
+}
+
+function setScale(i) {
+  const sim = active, s = sim.scales[i];
+  sim.scale = i;
+  sim.fields.filter(f => s[f.id]).forEach(f => {
+    const [top, step] = s[f.id], slider = $("r_" + f.id);
+    vals[f.id] = Math.min(vals[f.id], top);
+    slider.max = top; slider.step = step; slider.value = vals[f.id];
+    $("n_" + f.id).value = shown(vals[f.id]);
+    $("h_" + f.id).textContent = `от ${shown(f.min)} до ${top}`;
+  });
+  document.querySelectorAll("#scales button").forEach((b, n) => b.setAttribute("aria-pressed", String(n === i)));
+}
+
+// Вписанное число больше предела: сами переходим на подходящий масштаб
+function fitScale() {
+  if (!active.scales) return;
+  const i = active.scales.findIndex(s => active.fields.every(f => !s[f.id] || s[f.id][0] >= vals[f.id]));
+  if (i > active.scale) setScale(i);
+}
+
+function paint(now, ball) {
+  const w = sky.clientWidth, h = sky.clientHeight, dpr = devicePixelRatio || 1;
+  if (!w) return;
+  if (sky.width !== Math.round(w * dpr)) { sky.width = Math.round(w * dpr); sky.height = Math.round(h * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const t = now ? (now - started) / 1000 : 0, r = active.compute(vals, t);
+  active.reads(r, vals).forEach(([name, text], i) => {
+    const box = $("reads").children[i];
+    box.firstChild.textContent = name;
+    if (box.lastChild.textContent !== text) box.lastChild.textContent = text;
+  });
+  active.draw(w, h, vals, r, ball || t);
+}
+
+function loop(now) {
+  if (!active) return;
+  paint(now);
+  frame = requestAnimationFrame(loop);
+}
+
+function update() {
+  cancelAnimationFrame(frame);
+  started = performance.now();
+  active.reset?.(vals);
+  if (active.live && !reduced()) frame = requestAnimationFrame(loop);
+  else paint(active.live ? started + 1000 * (active.still ?? 1) : 0);
+}
+
+function open(sim) {
+  active = sim;
+  if (!sim.state) {
+    sim.state = {};
+    sim.fields.forEach(f => { sim.state[f.id] = f.value; });
+    (sim.selects || []).forEach(s => { const v = s.value ?? s.options[0][0]; sim.state[s.id] = s.number ? +v : v; });
+    (sim.checks || []).forEach(c => { sim.state[c.id] = c.value; });
+  }
+  vals = sim.state;
+  $("title").textContent = sim.title;
+  sky.setAttribute("aria-label", sim.describe);
+  $("formulas").innerHTML = sim.formulas.join("<br>");
+  $("remark").textContent = sim.remark;
+  $("tasks").replaceChildren(...sim.tasks.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  $("reads").innerHTML = '<div class="read"><span></span><b></b></div>'.repeat(4);
+  $("scales").hidden = !sim.scales;
+  $("scales").innerHTML = "<span>Масштаб</span>";
+  buildControls(sim);
+  (sim.scales || []).forEach((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = s.text;
+    b.addEventListener("click", () => { setScale(i); update(); });
+    $("scales").append(b);
+  });
+  if (sim.scales) setScale(sim.scale ?? 0);
+  update();
+}
+
+$("controls").addEventListener("submit", e => { e.preventDefault(); active.action?.run(); });
+new ResizeObserver(() => { if (active) paint(active.live ? performance.now() : 0); }).observe(sky);
+new MutationObserver(() => { if (active) paint(active.live ? performance.now() : 0); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (active) paint(active.live ? performance.now() : 0); });
+
+const sections = [...new Set(Object.values(SIMS).map(s => s.section))];
+$("catalog").innerHTML = sections.map(name => `<section class="group"><h2>${name}</h2><div class="cards">${
+  Object.entries(SIMS).filter(([, s]) => s.section === name).map(([key, s]) => `<a class="card" href="#${key}"><b>${s.title}</b><span>${s.brief}</span></a>`).join("")
+}</div></section>`).join("");
+
+function route() {
+  const sim = SIMS[location.hash.slice(1)];
+  cancelAnimationFrame(frame);
+  active = null;
+  $("lab").hidden = !sim;
+  $("home").hidden = Boolean(sim);
+  if (sim) open(sim);
+}
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
