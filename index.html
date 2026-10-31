@@ -368,22 +368,38 @@ function drawOhm(w, h, v, r, t) {
   line(x1, y2, mid - 8, y2, ink); line(mid + 8, y2, x2, y2, ink);
   line(mid - 8, y2 - 16, mid - 8, y2 + 16, ink, 3); line(mid + 8, y2 - 8, mid + 8, y2 + 8, ink, 3);
   label(`ℰ = ${shown(v.emf)} В`, mid - 40, y2 + 34 > h ? y2 - 22 : y2 + 34);
-  const span = 2 * ((x2 - x1) + (y2 - y1)), speed = Math.min(160, 14 + r.I * 22);
+  const span = 2 * ((x2 - x1) + (y2 - y1)), pace = I => Math.min(160, 14 + I * 22), speed = pace(r.I), gap = span / 14;
+  const parallel = v.conn === "par", a = mid - w * 0.2, b = mid + w * 0.2, y3 = y1 + (y2 - y1) * 0.45;
+  // Ветвь параллельного соединения: чем больше ток в ней, тем быстрее идут точки
+  const branch = (points, current) => {
+    const parts = points.slice(1).map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
+    const length = parts.reduce((sum, part) => sum + part, 0), count = Math.max(2, Math.round(length / gap));
+    for (let i = 0; i < count; i++) {
+      let s = (i * length / count + t * pace(current)) % length, k = 0;
+      while (s > parts[k]) s -= parts[k++];
+      const [px, py] = points[k], [qx, qy] = points[k + 1];
+      dot(px + (qx - px) * s / parts[k], py + (qy - py) * s / parts[k], 3.5, color("--hit"));
+    }
+  };
+  if (parallel) branch([[a, y1], [b, y1]], r.i1);
   for (let i = 0; i < 14; i++) {
     let s = (i * span / 14 + t * speed) % span, x, y;
     if (s < x2 - x1) { x = x1 + s; y = y1; }
     else if ((s -= x2 - x1) < y2 - y1) { x = x2; y = y1 + s; }
     else if ((s -= y2 - y1) < x2 - x1) { x = x2 - s; y = y2; }
     else { s -= x2 - x1; x = x1; y = y2 - s; }
+    if (parallel && y === y1 && x > a && x < b) continue;  // здесь ток уже разделился на ветви
     dot(x, y, 3.5, color("--hit"));
   }
   if (v.conn === "one") resistor(mid, y1, "R₁");
   if (v.conn === "ser") { resistor(mid - w * 0.18, y1, "R₁"); resistor(mid + w * 0.18, y1, "R₂"); }
-  if (v.conn === "par") {
-    const y3 = y1 + (y2 - y1) * 0.45, a = mid - w * 0.2, b = mid + w * 0.2;
+  if (parallel) {
     line(a, y1, a, y3, ink); line(b, y1, b, y3, ink); line(a, y3, b, y3, ink);
+    branch([[a, y1], [a, y3], [b, y3], [b, y1]], r.i2);  // рисуем после линий, иначе они закроют точки
     resistor(mid, y1, "R₁"); resistor(mid, y3, "R₂");
     dot(a, y1, 3, ink); dot(b, y1, 3, ink);
+    label(`I₁ = ${smart(r.i1)} А`, mid + 38, y1 - 8, color("--hit"), 12);
+    label(`I₂ = ${smart(r.i2)} А`, mid - 34, y3 + 26, color("--hit"), 12);
   }
   label(`I = ${smart(r.I)} А`, x1 + 8, y1 - 16, color("--hit"), 12);
 }
@@ -590,7 +606,7 @@ const SIMS = {
     reads: r => [["Общее сопротивление", smart(r.R) + " Ом"], ["Сила тока", smart(r.I) + " А"], ["Напряжение на цепи", smart(r.U) + " В"], ["Мощность на цепи", smart(r.P) + " Вт"]],
     draw: drawOhm, describe: "Электрическая цепь с источником и резисторами",
     formulas: ["I = ℰ / (R + r)", "R = R₁ + R₂ при последовательном", "R = R₁ · R₂ / (R₁ + R₂) при параллельном", "P = U · I"],
-    remark: "Точки на схеме показывают направление тока от плюса к минусу. Чем больше ток, тем быстрее они движутся.",
+    remark: "Точки на схеме показывают направление тока от плюса к минусу. Чем больше ток, тем быстрее они движутся. При параллельном соединении ток делится между ветвями: через меньшее сопротивление идёт больший ток.",
     tasks: ["Соедини два равных резистора последовательно, а потом параллельно. Во сколько раз изменилось сопротивление?", "Поставь внутреннее сопротивление 0 Ом. Чему равно напряжение на цепи?", "Найди R₁, при котором мощность наибольшая, если резистор один. Сравни с r."],
   },
   linza: {
