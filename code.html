@@ -131,6 +131,7 @@ canvas { display: block; width: 100%; }
   <section class="sheet" id="answerBlock" hidden>
     <h2>Решаешь на другом языке?</h2>
     <p class="note" id="answerNote"></p>
+    <button type="button" id="getFile">Получить файл в чат</button>
     <div class="group" id="answers"></div>
     <button type="button" id="answerBtn">Проверить ответ</button>
     <p id="answerResult" role="status"></p>
@@ -147,6 +148,7 @@ canvas { display: block; width: 100%; }
 const $ = id => document.getElementById(id);
 const exam = new URLSearchParams(location.search).get("exam");  // ОГЭ и ЕГЭ не смешиваются: страница показывает только свой экзамен
 const list = TASKS[exam] || [];
+const BOT_NAME = "NewtonPhys_bot";  // это имя не зависит от Telegram Premium
 const KEYS = ["Tab", ":", "(", ")", "[", "]", "=", "==", "%", "//", "\"", ",", "+", "-", "*", "<", ">", "!="];
 const ROBOT_KEYS = {
   algo: ["нц пока ", "кц\n", "если ", " то\n", "все\n", "иначе\n", "не ", " и ", " или ", "вправо\n", "влево\n", "вверх\n", "вниз\n", "закрасить\n",
@@ -200,9 +202,8 @@ function same(got, want, near) {
   const a = tokens(got), b = tokens(want);
   return a.length === b.length && a.every((x, i) => x === b[i] || (near && Math.abs(Number(x) - Number(b[i])) <= near));
 }
-const seed = id => [...id].reduce((s, c) => s * 31 + c.charCodeAt(0) | 0, 7);
 const cache = {};
-const testsOf = task => cache[task.id] ||= task.tests(rng(seed(task.id)));
+const testsOf = task => cache[task.id] ||= task.tests(rng(seedOf(task.id)));
 
 async function runTests(task, code) {  // первая непройденная проверка объясняет ошибку лучше всех сразу
   const tests = testsOf(task);
@@ -227,7 +228,7 @@ function robotCheck(f, got) {  // на поле важно только то, ч
 }
 async function runRobot(task, source, lang) {
   const code = lang === "algo" ? translate(source) : source;
-  const fields = cache[task.id] ||= task.fields(rng(seed(task.id)));
+  const fields = cache[task.id] ||= task.fields(rng(seedOf(task.id)));
   for (let i = 0; i < fields.length; i++) {
     $("status").textContent = `Проверяем: поле ${i + 1} из ${fields.length}…`;
     const got = await execute(code, "", null, task.limit, fields[i]);
@@ -301,10 +302,7 @@ const isRobot = task => task.kind === "robot";
 const codeKey = task => "code:" + task.id + (isRobot(task) ? ":" + language : "");
 const startOf = task => isRobot(task) ? task.start[language] : task.start;
 const modelOf = task => isRobot(task) ? task.model[language] : task.model;
-const answerTests = task => {  // файл A и B в задании 27 решаются оба, в остальных заданиях ответа по одному файлу достаточно
-  const hidden = testsOf(task).filter(t => t.hidden);
-  return task.no === 27 ? hidden : hidden.slice(0, 1);
-};
+const answerTests = task => answerTestsOf(task, testsOf(task));
 function chooseLanguage(lang) {
   language = lang;
   write("code:language", lang);
@@ -314,12 +312,12 @@ function chooseLanguage(lang) {
   $("model").textContent = modelOf(current);
   lines();
 }
-function fileLink(test, name, label) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([test.files[name]], { type: "text/plain" }));
-  a.download = label === "файл B" ? name.replace(".", "b.") : label === "файл A" ? name.replace(".", "a.") : name;
-  a.textContent = `Скачать ${a.download}`;
-  return a;
+function askBot(task) {  // браузер внутри Telegram не скачивает файлы, поэтому их присылает бот
+  const path = `/${BOT_NAME}?start=file_${task.id}`;
+  try {
+    if (window.TelegramWebviewProxy) return window.TelegramWebviewProxy.postEvent("web_app_open_tg_link", JSON.stringify({ path_full: path }));
+  } catch {}
+  location.href = "https://t.me" + path;
 }
 function answerForm(task) {
   const box = $("answers");
@@ -327,7 +325,8 @@ function answerForm(task) {
   $("answerResult").textContent = "";
   const tests = task.kind ? [] : answerTests(task);
   $("answerBlock").hidden = exam !== "ege" || !tests.length;
-  $("answerNote").textContent = task.file ? "Скачай файл, реши задание на компьютере на любом языке и введи ответ." : "Реши задание на компьютере на любом языке и введи все числа из ответа.";
+  $("getFile").hidden = !task.file;
+  $("answerNote").textContent = task.file ? "Бот пришлёт файл в чат. Реши задание на компьютере на любом языке, вернись сюда и введи ответ." : "Реши задание на компьютере на любом языке и введи все числа из ответа.";
   tests.forEach((test, i) => {
     const row = document.createElement("div");
     row.className = "answer";
@@ -338,7 +337,6 @@ function answerForm(task) {
     area.id = `answer${i}`;
     area.setAttribute("autocomplete", "off");
     row.append(label, area);
-    if (task.file) row.append(fileLink(test, task.file, test.label));
     box.append(row);
   });
 }
@@ -349,7 +347,7 @@ function showTask(task) {
   $("text").textContent = task.text;
   $("board").hidden = $("boardNote").hidden = $("langs").hidden = !isRobot(task);
   if (isRobot(task)) {
-    const fields = cache[task.id] ||= task.fields(rng(seed(task.id)));
+    const fields = cache[task.id] ||= task.fields(rng(seedOf(task.id)));
     $("sample").replaceChildren();
     $("preview").hidden = true;
     $("inputBlock").hidden = true;
@@ -513,6 +511,7 @@ $("check").addEventListener("click", async () => {
     ]), ...(test.hidden ? [line("Твоя программа напечатала"), block(got.out.trimEnd().slice(0, 500) || "ничего")] : []));
   } catch (e) { failed(e); } finally { busy(false); }
 });
+$("getFile").addEventListener("click", () => askBot(current));
 $("answerBtn").addEventListener("click", () => {
   const tests = answerTests(current);
   const good = tests.every((test, i) => same($(`answer${i}`).value, test.out, test.near));
