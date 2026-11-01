@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Задания по программированию для подготовки к ОГЭ и ЕГЭ по информатике.">
+<title>Код руками</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов, чтобы оба сайта выглядели одной работой. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 24px 48px; display: grid; gap: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 40px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 15px; font-weight: 500; color: var(--muted); }
+p { margin: 0; }
+.lead { color: var(--muted); margin-top: 10px; }
+.note { color: var(--muted); font-size: 14px; }
+.back { font-weight: 600; text-decoration: none; color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.group { display: grid; gap: 10px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.card { display: flex; justify-content: space-between; gap: 10px; padding: 14px 16px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  color: inherit; text-decoration: none; font-weight: 600; min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.card i { font-style: normal; color: var(--good); }
+
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+pre { margin: 0; font: 400 14px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.box { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; max-height: 190px; overflow: auto; }
+.samples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.samples span { display: block; color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+
+.editor { display: grid; grid-template-columns: auto minmax(0, 1fr); background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.editor:focus-within { border-color: var(--accent); }
+.gutter { padding: 10px 8px; color: var(--muted); font: 400 16px/1.5 var(--mono); text-align: right; user-select: none; overflow: hidden; height: 320px; background: var(--paper); }
+textarea { font: 400 16px/1.5 var(--mono); color: var(--ink); background: transparent; }
+#code { display: block; width: 100%; height: 320px; padding: 10px; border: 0; outline: 0; resize: none; white-space: pre; overflow: auto; tab-size: 4; }
+#input { width: 100%; min-height: 96px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); resize: vertical; }
+.keys { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.keys button { flex: none; min-width: 42px; padding: 8px 10px; font: 500 15px var(--mono); border-color: var(--line); color: var(--ink); background: var(--sheet); }
+.btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: .55; cursor: default; }
+#status { min-height: 21px; color: var(--muted); font-size: 14px; }
+#result { display: grid; gap: 8px; }
+#result .ok { color: var(--good); font-weight: 600; }
+#result .bad { color: var(--hit); font-weight: 600; }
+@media (max-width: 560px) { .samples { grid-template-columns: minmax(0, 1fr); } #code, .gutter { height: 260px; } }
+</style>
+</head>
+<body>
+
+<main class="wrap" id="home">
+  <header>
+    <h1 id="heading">Код руками</h1>
+    <p class="lead" id="lead"></p>
+  </header>
+  <div class="group" id="catalog"></div>
+  <p class="note" id="remark">Задания составлены по типам демоверсии, это не настоящие варианты экзамена. Программы пишутся на Python и выполняются прямо на твоём устройстве.</p>
+</main>
+
+<main class="wrap" id="task" hidden>
+  <a class="back" href="#">← Все задания</a>
+  <h1 id="title"></h1>
+  <section class="sheet">
+    <p id="text"></p>
+    <div class="samples" id="sample"></div>
+    <div id="preview" hidden><h2 id="previewTitle"></h2><pre class="box" id="previewBody"></pre></div>
+    <p class="note" id="hint" hidden></p>
+    <button type="button" id="hintBtn">Подсказка</button>
+  </section>
+  <section class="group">
+    <h2>Твоя программа</h2>
+    <div class="keys" id="keys" role="group" aria-label="Символы для программы"></div>
+    <div class="editor">
+      <pre class="gutter" id="gutter" aria-hidden="true"></pre>
+      <textarea id="code" aria-label="Программа на Python" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
+    </div>
+    <div id="inputBlock" hidden>
+      <h2><label for="input">Входные данные для запуска</label></h2>
+      <textarea id="input" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    </div>
+    <div class="btns">
+      <button type="button" id="run">Запустить</button>
+      <button type="button" class="main" id="check">Проверить</button>
+      <button type="button" id="stop" hidden>Остановить</button>
+    </div>
+    <p id="status" role="status"></p>
+    <section class="sheet" id="result" hidden aria-live="polite"></section>
+  </section>
+  <section class="sheet">
+    <button type="button" id="modelBtn">Показать решение</button>
+    <pre class="box" id="model" hidden style="max-height:none"></pre>
+  </section>
+</main>
+
+<script src="code-tasks.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const exam = new URLSearchParams(location.search).get("exam");  // ОГЭ и ЕГЭ не смешиваются: страница показывает только свой экзамен
+const list = TASKS[exam] || [];
+const KEYS = ["Tab", ":", "(", ")", "[", "]", "=", "==", "%", "//", "\"", ",", "+", "-", "*", "<", ">", "!="];
+
+const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
+const write = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
+const solved = () => new Set((read("code:solved") || "").split(",").filter(Boolean));
+
+// Python загружается один раз и работает в отдельном потоке
+let worker = null, loaded = null, pending = null, jobs = 0;
+function boot() {
+  if (loaded) return loaded;
+  $("status").textContent = "Загружаем Python, в первый раз это может занять минуту…";
+  worker = new Worker("code-worker.js", { type: "module" });
+  loaded = new Promise((done, fail) => {
+    worker.onerror = () => fail(new Error("Python не загрузился"));
+    worker.onmessage = ({ data }) => {
+      if (data.type === "ready") { $("status").textContent = ""; done(); }
+      else if (data.type === "fatal") fail(new Error(data.error));
+      else if (data.type === "done" && pending && pending.id === data.id) finish(data);
+    };
+  });
+  return loaded;
+}
+function finish(result) {
+  clearTimeout(pending.timer);
+  const { resolve } = pending;
+  pending = null;
+  resolve(result);
+}
+function drop() {  // зависшую программу можно остановить, только закрыв поток целиком
+  worker.terminate();
+  worker = loaded = null;
+}
+async function execute(code, input, files, seconds) {
+  await boot();
+  return new Promise(resolve => {
+    const id = ++jobs;
+    pending = { id, resolve, timer: setTimeout(() => { drop(); finish({ timeout: true }); }, seconds * 1000) };
+    worker.postMessage({ id, code, input, files });
+  });
+}
+const stopped = () => { if (!pending) return; drop(); finish({ stopped: true }); };
+
+const tokens = text => text.trim().split(/\s+/).filter(Boolean);
+function same(got, want, near) {
+  const a = tokens(got), b = tokens(want);
+  return a.length === b.length && a.every((x, i) => x === b[i] || (near && Math.abs(Number(x) - Number(b[i])) <= near));
+}
+const seed = id => [...id].reduce((s, c) => s * 31 + c.charCodeAt(0) | 0, 7);
+const cache = {};
+const testsOf = task => cache[task.id] ||= task.tests(rng(seed(task.id)));
+
+async function runTests(task, code) {  // первая непройденная проверка объясняет ошибку лучше всех сразу
+  const tests = testsOf(task);
+  for (let i = 0; i < tests.length; i++) {
+    $("status").textContent = `Проверяем: ${tests[i].label}, ${i + 1} из ${tests.length}…`;
+    const got = await execute(code, tests[i].input, tests[i].files, task.limit);
+    if (got.stopped) return { stopped: true };
+    if (got.timeout || got.error || !same(got.out, tests[i].out, tests[i].near)) return { test: tests[i], got };
+  }
+  return { ok: true };
+}
+
+function card(task) {
+  const a = document.createElement("a");
+  a.className = "card";
+  a.href = "#" + task.id;
+  a.textContent = task.title;
+  if (solved().has(task.id)) { const mark = document.createElement("i"); mark.textContent = "✓ решено"; a.append(mark); }
+  return a;
+}
+function catalog() {
+  $("catalog").replaceChildren();
+  if (!list.length) {
+    $("lead").textContent = "Открой этот раздел из бота, в режиме ОГЭ или ЕГЭ по информатике.";
+    $("remark").hidden = true;
+    return;
+  }
+  const done = solved(), count = list.filter(t => done.has(t.id)).length;
+  $("heading").textContent = exam === "oge" ? "ОГЭ: задание 16" : "ЕГЭ: задания 24–27";
+  $("lead").textContent = `Напиши программу, запусти её и проверь. Решено ${count} из ${list.length}.`;
+  for (const no of new Set(list.map(t => t.no))) {
+    const group = document.createElement("section");
+    group.className = "group";
+    const title = document.createElement("h2");
+    title.textContent = `Задание ${no}`;
+    const cards = document.createElement("div");
+    cards.className = "cards";
+    cards.append(...list.filter(t => t.no === no).map(card));
+    group.append(title, cards);
+    $("catalog").append(group);
+  }
+}
+
+let current = null;
+function shield(text, limit = 14) {  // большой файл показываем только началом, иначе страница станет тяжёлой
+  const lines = text.split("\n", limit + 1);
+  return lines.length > limit ? lines.slice(0, limit).join("\n") + "\n…" : text.trimEnd();
+}
+function sampleBlock(caption, value) {
+  const box = document.createElement("div");
+  const label = document.createElement("span");
+  label.textContent = caption;
+  const body = document.createElement("pre");
+  body.className = "box";
+  body.textContent = value;
+  box.append(label, body);
+  return box;
+}
+function showTask(task) {
+  current = task;
+  $("title").textContent = `${task.no}. ${task.title}`;
+  $("text").textContent = task.text;
+  $("sample").replaceChildren(...(task.sample ? [sampleBlock(task.file ? `Пример файла ${task.file}` : "Пример ввода", task.sample.input.trimEnd()), sampleBlock("Что должна напечатать программа", task.sample.output)] : []));
+  const file = task.file && testsOf(task).find(t => t.hidden);
+  $("preview").hidden = !file;
+  if (file) {
+    const body = file.files[task.file];
+    $("previewTitle").textContent = `Начало файла ${task.file}, всего в нём ${body.length} символов`;
+    $("previewBody").textContent = shield(body.slice(0, 3000));
+  }
+  $("hint").textContent = task.hint;
+  $("hint").hidden = true;
+  $("hintBtn").hidden = false;
+  $("model").textContent = task.model;
+  $("model").hidden = true;
+  $("modelBtn").textContent = "Показать решение";
+  $("inputBlock").hidden = Boolean(task.file) || !task.sample;
+  if (task.sample && !task.file) $("input").value = task.sample.input;
+  $("code").value = read("code:" + task.id) ?? task.start;
+  $("result").hidden = true;
+  $("status").textContent = "";
+  lines();
+  boot().catch(failed);
+}
+function route() {
+  stopped();
+  const task = list.find(t => "#" + t.id === location.hash);
+  $("home").hidden = Boolean(task);
+  $("task").hidden = !task;
+  scrollTo(0, 0);
+  if (task) showTask(task); else catalog();
+}
+
+function lines() {
+  const count = $("code").value.split("\n").length;
+  $("gutter").textContent = Array.from({ length: count }, (_, i) => i + 1).join("\n");
+  $("gutter").scrollTop = $("code").scrollTop;
+}
+function put(text) {
+  const area = $("code");
+  area.focus();
+  area.setRangeText(text, area.selectionStart, area.selectionEnd, "end");
+  saved();
+}
+function saved() {
+  lines();
+  if (current) write("code:" + current.id, $("code").value);
+}
+$("code").addEventListener("input", saved);
+$("code").addEventListener("scroll", () => { $("gutter").scrollTop = $("code").scrollTop; });
+$("code").addEventListener("keydown", e => {
+  if (e.key === "Tab") { e.preventDefault(); put("    "); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const area = $("code"), before = area.value.slice(0, area.selectionStart);
+    const line = before.slice(before.lastIndexOf("\n") + 1);
+    put("\n" + line.match(/^ */)[0] + (line.trimEnd().endsWith(":") ? "    " : ""));
+  }
+});
+for (const key of KEYS) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = key;
+  b.addEventListener("pointerdown", e => e.preventDefault());  // иначе поле теряет курсор и на телефоне прячется клавиатура
+  b.addEventListener("click", () => put(key === "Tab" ? "    " : key));
+  $("keys").append(b);
+}
+
+const line = (text, cls) => { const p = document.createElement("p"); if (cls) p.className = cls; p.textContent = text; return p; };
+const block = text => { const pre = document.createElement("pre"); pre.className = "box"; pre.textContent = text; return pre; };
+function show(...nodes) {
+  $("result").replaceChildren(...nodes);
+  $("result").hidden = false;
+  $("status").textContent = "";
+}
+function busy(on) {
+  $("run").disabled = $("check").disabled = on;
+  $("stop").hidden = !on;
+}
+function failed(error) {
+  loaded = null;
+  $("status").textContent = "";
+  show(line("Python не загрузился. Проверь интернет и открой страницу ещё раз.", "bad"), block(String(error.message || error)));
+  busy(false);
+}
+const tooLong = seconds => line(`Программа не закончила работу за ${seconds} секунд. Возможно, цикл не останавливается или способ слишком медленный.`, "bad");
+
+$("run").addEventListener("click", async () => {
+  busy(true);
+  $("status").textContent = "Выполняем программу…";
+  try {
+    const main = testsOf(current).find(t => t.hidden && t.files);
+    const got = await execute($("code").value, $("input").value, main && main.files, current.limit);
+    if (got.stopped) { show(line("Программа остановлена.")); return; }
+    if (got.timeout) { show(tooLong(current.limit)); return; }
+    show(line("Вывод программы"), block(got.out.slice(0, 5000) || "Программа ничего не напечатала."), ...(got.error ? [line("Ошибка", "bad"), block(got.error)] : []));
+  } catch (e) { failed(e); } finally { busy(false); }
+});
+$("check").addEventListener("click", async () => {
+  busy(true);
+  try {
+    const verdict = await runTests(current, $("code").value);
+    if (verdict.stopped) { show(line("Проверка остановлена.")); return; }
+    if (verdict.ok) {
+      write("code:solved", [...solved().add(current.id)].join(","));
+      show(line("Верно! Все проверки пройдены.", "ok"));
+      return;
+    }
+    const { test, got } = verdict;
+    if (got.timeout) { show(line(`Не прошла проверка: ${test.label}.`, "bad"), tooLong(current.limit)); return; }
+    if (got.error) { show(line(`Не прошла проверка: ${test.label}.`, "bad"), block(got.error)); return; }
+    show(line(`Не прошла проверка: ${test.label}.`, "bad"), ...(test.hidden ? [line("Ответ на этих данных неверный.")] : [
+      ...(test.input ? [line("Входные данные"), block(test.input.trimEnd())] : [line("Файл"), block(shield(test.files[current.file]))]),
+      line("Нужно"), block(test.out), line("Твоя программа напечатала"), block(got.out.trimEnd() || "ничего"),
+    ]), ...(test.hidden ? [line("Твоя программа напечатала"), block(got.out.trimEnd().slice(0, 500) || "ничего")] : []));
+  } catch (e) { failed(e); } finally { busy(false); }
+});
+$("stop").addEventListener("click", stopped);
+$("hintBtn").addEventListener("click", () => { $("hint").hidden = false; $("hintBtn").hidden = true; });
+$("modelBtn").addEventListener("click", () => {
+  $("model").hidden = !$("model").hidden;
+  $("modelBtn").textContent = $("model").hidden ? "Показать решение" : "Скрыть решение";
+});
+addEventListener("hashchange", route);
+route();
+
+// Без библиотеки Telegram: просим открыть сайт на весь экран, иначе редактор не помещается
+try {
+  window.TelegramWebviewProxy?.postEvent("web_app_ready", "");
+  window.TelegramWebviewProxy?.postEvent("web_app_expand", "");
+} catch {}
+</script>
+</body>
+</html>
