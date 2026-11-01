@@ -468,3 +468,11 @@ print(int(px * 10000), int(py * 10000))
 ];
 
 const TASKS = { oge: OGE_TASKS, ege: EGE_TASKS };
+
+const seedOf = id => [...id].reduce((s, c) => s * 31 + c.charCodeAt(0) | 0, 7);
+const answerTestsOf = (task, tests) => {  // файл A и B в задании 27 решаются оба, в остальных заданиях ответа по одному файлу достаточно
+  const hidden = tests.filter(t => t.hidden);
+  return task.no === 27 ? hidden : hidden.slice(0, 1);
+};
+// Бот присылает те же файлы, что считает страница. После правки заданий их нужно собрать заново: tools/export_code_files.py
+const fileNameOf = (test, name) => test.label === "файл B" ? name.replace(".", "b.") : test.label === "файл A" ? name.replace(".", "a.") : name;
