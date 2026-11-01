@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Тренировка обоснования в задании 26 ЕГЭ по физике.">
+<title>Задание 26</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов: это вторая вкладка того же сайта. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f; --solid: #c98a4b;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --solid: #b57a3e;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --solid: #b57a3e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 40px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 15px; font-weight: 500; }
+p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead { color: var(--muted); margin-top: 10px; }
+.note { color: var(--muted); font-size: 14px; }
+.tabs { display: flex; gap: 8px; }
+.tabs a { flex: 1; text-align: center; padding: 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 600; }
+.tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.back { font-weight: 600; text-decoration: none; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.card { display: grid; gap: 2px; padding: 14px 16px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; color: inherit; text-decoration: none; min-width: 0; }
+.card:hover { border-color: var(--accent); }
+.card b { font-weight: 600; }
+.card span { color: var(--muted); font-size: 14px; }
+.card i { font-style: normal; color: var(--good); font-size: 14px; }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.steps button { padding: 8px 4px; font-size: 14px; border-color: var(--line); color: var(--ink); }
+.steps button[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: .5; cursor: default; }
+canvas { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+.reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.read { background: var(--sheet); padding: 8px 10px; min-width: 0; }
+.read span { display: block; color: var(--muted); font-size: 12px; }
+.read b { font: 500 17px/1.3 var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.field { display: grid; gap: 2px; }
+.field label { display: flex; justify-content: space-between; gap: 10px; font-weight: 500; }
+.field output { font: 500 15px var(--mono); }
+input[type=range] { width: 100%; height: 32px; accent-color: var(--accent); margin: 0; }
+.block { display: grid; gap: 8px; }
+.option { text-align: left; font-weight: 500; font-size: 15px; border-color: var(--line); color: var(--ink); padding: 10px 12px; }
+.option.right { border-color: var(--good); color: var(--good); }
+.option.wrong { border-color: var(--hit); color: var(--hit); }
+.why { font-size: 14px; }
+.why.right { color: var(--good); }
+.why.wrong { color: var(--hit); }
+.model { white-space: pre-line; }
+textarea { width: 100%; min-height: 170px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); resize: vertical; }
+.check { display: flex; gap: 10px; align-items: flex-start; }
+.check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" aria-label="Разделы сайта">
+    <a href="./?exam=ege">Опыты</a>
+    <a href="task26.html?exam=ege" aria-current="page">Задание 26</a>
+  </nav>
+
+  <main id="home" style="display:grid;gap:20px">
+    <header>
+      <h1>Задание 26: обоснование</h1>
+      <p class="lead" id="lead"></p>
+    </header>
+    <div class="cards" id="catalog"></div>
+    <p class="note">Один балл из четырёх дают за обоснование: почему законы можно применять именно здесь. Ситуации составлены для тренировки, это не настоящие задания экзамена. Балл на экзамене ставит эксперт.</p>
+  </main>
+
+  <main id="task" style="display:grid;gap:16px" hidden>
+    <a class="back" href="#">← Все ситуации</a>
+    <h1 id="title"></h1>
+    <p id="text"></p>
+    <div class="steps" id="steps" role="group" aria-label="Шаги"></div>
+
+    <section class="sheet" id="step0" hidden>
+      <h2>Меняй условия и смотри, когда закон работает</h2>
+      <canvas id="stage" role="img" aria-label="Опыт"></canvas>
+      <div class="reads" id="reads"></div>
+      <p id="comment"></p>
+      <form id="controls" class="block"></form>
+      <button type="button" class="main" data-go="1">Дальше: собрать обоснование</button>
+    </section>
+
+    <section class="sheet" id="step1" hidden>
+      <h2>Собери обоснование</h2>
+      <p class="note">Нажимай варианты. Если ошибёшься, бот объяснит почему.</p>
+      <div class="block" id="blocks" style="gap:16px"></div>
+      <button type="button" class="main" id="toModel" data-go="2" disabled>Дальше: посмотреть образец</button>
+    </section>
+
+    <section class="sheet" id="step2" hidden>
+      <h2>Так это выглядит на экзамене</h2>
+      <p class="model" id="model"></p>
+      <h2>Перейдём к решению</h2>
+      <p class="model" id="solution"></p>
+      <button type="button" class="main" data-go="3">Дальше: написать самому</button>
+    </section>
+
+    <section class="sheet" id="step3" hidden>
+      <h2>Напиши обоснование своими словами</h2>
+      <textarea id="own" aria-label="Твоё обоснование"></textarea>
+      <h2>Проверь себя</h2>
+      <div class="block" id="checks"></div>
+      <p id="done" style="color:var(--good);font-weight:600" hidden>Готово! Эта ситуация отмечена как пройденная.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const G = 10;
+const num = (x, d = 2) => x.toFixed(d).replace(".", ",");
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const load = key => { try { return localStorage.getItem(key); } catch { return null; } };
+const save = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
+
+const FRAME = (wrong, why) => ({
+  title: "Система отсчёта",
+  options: [
+    ["Систему отсчёта, связанную с Землёй, считаем инерциальной", true, "Верно. Законы Ньютона и законы сохранения записываем в инерциальной системе."],
+    [wrong, false, why],
+  ],
+});
+const POINT = (why) => ({
+  title: "Модель тела",
+  options: [
+    [`Материальные точки: ${why}`, true, "Верно. Размеры и вращение здесь не важны."],
+    ["Абсолютно твёрдые тела: нужно считать моменты сил", false, "В этой ситуации вращение тел не рассматривается, моменты сил не нужны."],
+  ],
+});
+const SOLID = {
+  title: "Модель тела",
+  options: [
+    ["Абсолютно твёрдое тело: важно, где приложены силы", true, "Верно. Для моментов важны точки приложения сил, а форма тела не меняется."],
+    ["Материальная точка: размеры тела не важны", false, "У материальной точки нет плеч сил, поэтому записать условие для моментов нельзя."],
+  ],
+};
+
+const SITUATIONS = [
+  {
+    id: "pulley", topic: "Динамика", title: "Блок с грузами",
+    text: "Грузы 1,5 кг и 1 кг связаны лёгкой нерастяжимой нитью, перекинутой через лёгкий блок. Трения нет. Найди ускорение грузов и силу натяжения нити, g = 10 м/с².",
+    blocks: [
+      FRAME("Систему отсчёта, связанную с падающим грузом, считаем инерциальной", "Груз движется с ускорением, поэтому связанная с ним система не инерциальная."),
+      POINT("грузы движутся поступательно"),
+      { title: "Какие законы нужны", options: [
+        ["Второй закон Ньютона для каждого груза", true, "Верно. На каждый груз действуют сила тяжести и натяжение нити."],
+        ["Закон сохранения импульса", false, "Внешние силы не скомпенсированы: импульс системы меняется."],
+        ["Первое условие равновесия", false, "Грузы движутся с ускорением, они не в равновесии."],
+      ] },
+      { title: "Почему ускорения грузов одинаковы", options: [
+        ["Нить нерастяжима", true, "Верно. Длина нити не меняется, поэтому грузы проходят одинаковый путь."],
+        ["Нить невесома", false, "Невесомость отвечает за одинаковое натяжение, а не за ускорения."],
+      ] },
+      { title: "Почему натяжение одинаково с обеих сторон", options: [
+        ["Нить и блок невесомы, трения в оси нет", true, "Верно. Если блок тяжёлый или есть трение, натяжения будут разными, это видно в опыте."],
+        ["Нить нерастяжима", false, "Нерастяжимость связывает ускорения, а не силы."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Грузы движутся поступательно, поэтому считаем их материальными точками и применяем к ним второй закон Ньютона. Нить нерастяжима, поэтому ускорения грузов равны по модулю. Нить и блок невесомы, трения в оси нет, поэтому сила натяжения одинакова вдоль всей нити.",
+    solution: "Для первого груза m₁a = m₁g − T, для второго m₂a = T − m₂g.\nОтсюда a = (m₁ − m₂)g / (m₁ + m₂) = 2 м/с², T = m₂(g + a) = 12 Н.",
+    checks: ["Назвал инерциальную систему отсчёта", "Объяснил, почему грузы можно считать материальными точками", "Объяснил одинаковые ускорения через нерастяжимость нити", "Объяснил одинаковое натяжение через невесомость нити и блока и отсутствие трения"],
+    controls: [["m1", "Масса левого груза", 1, 3, 0.1, 1.5, "кг"], ["pulley", "Масса блока", 0, 3, 0.1, 0, "кг"]],
+    show(v) {
+      const m2 = 1, a = (v.m1 - m2) * G / (v.m1 + m2 + v.pulley / 2);  // блок считаем однородным диском
+      return { a, reads: [["Ускорение", `${num(a)} м/с²`], ["Натяжение слева", `${num(v.m1 * (G - a))} Н`], ["Натяжение справа", `${num(m2 * (G + a))} Н`]],
+        comment: v.pulley ? "Блок тяжёлый: натяжения слева и справа разные. Фразы про одинаковое натяжение здесь уже нельзя писать." : v.m1 === m2 ? "Массы равны: система в равновесии, ускорения нет." : "Блок невесомый: натяжения равны. Именно это условие и нужно назвать в обосновании." };
+    },
+    draw(c, w, h, v, t, css, shown) {
+      const cx = w / 2, r = h * 0.1, top = h * 0.17;
+      const span = h * 0.3, a = shown.a, s = a > 0 ? span * ((t * Math.sqrt(a) / 2) % 1) ** 2 : 0;
+      const box = (x, y, size) => { c.fillStyle = css("--solid"); c.fillRect(x - size / 2, y, size, size); };
+      c.strokeStyle = css("--ink");
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(cx - r, top); c.lineTo(cx - r, h * 0.42 + s);
+      c.moveTo(cx + r, top); c.lineTo(cx + r, h * 0.42 - s);
+      c.moveTo(cx - r, top);
+      c.arc(cx, top, r, Math.PI, 0);
+      c.stroke();
+      c.fillStyle = v.pulley ? css("--accent") : css("--line");
+      c.beginPath(); c.arc(cx, top, r * 0.75, 0, 7); c.fill();
+      box(cx - r, h * 0.42 + s, h * (0.08 + 0.04 * v.m1));
+      box(cx + r, h * 0.42 - s, h * 0.12);
+    },
+  },
+  {
+    id: "spring", topic: "Законы сохранения", title: "Брусок на пружине",
+    text: "Брусок 0,5 кг лежит на столе и прикреплён к пружине жёсткостью 200 Н/м. Пружину растянули на 10 см и отпустили. Коэффициент трения 0,2. Найди скорость бруска в момент, когда пружина не деформирована, g = 10 м/с².",
+    blocks: [
+      FRAME("Систему отсчёта, связанную с бруском, считаем инерциальной", "Брусок движется с ускорением, поэтому эта система не инерциальная."),
+      POINT("брусок движется поступательно"),
+      { title: "Какой закон нужен", options: [
+        ["Изменение механической энергии равно работе силы трения", true, "Верно. Трение совершает работу, поэтому механическая энергия уменьшается."],
+        ["Закон сохранения механической энергии", false, "Он не выполняется: сила трения совершает работу и энергия переходит в тепло."],
+        ["Закон сохранения импульса", false, "Внешние силы не скомпенсированы, импульс бруска меняется."],
+      ] },
+      { title: "Почему сила трения равна μmg", options: [
+        ["Брусок не движется по вертикали, поэтому N = mg", true, "Верно. Это второй закон Ньютона в проекции на вертикальную ось."],
+        ["Так написано в условии", false, "В условии этого нет, равенство N = mg нужно обосновать."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Брусок движется поступательно, поэтому считаем его материальной точкой. По вертикали брусок не движется, значит, по второму закону Ньютона N = mg, а сила трения скольжения равна μmg. Сила трения совершает работу, поэтому механическая энергия не сохраняется: её изменение равно работе силы трения.",
+    solution: "kx²/2 = mv²/2 + μmgx, то есть 1 Дж = mv²/2 + 0,1 Дж.\nОтсюда v = √(2 · 0,9 / 0,5) ≈ 1,9 м/с.",
+    checks: ["Назвал инерциальную систему отсчёта", "Объяснил, почему брусок можно считать материальной точкой", "Обосновал N = mg", "Объяснил, почему механическая энергия не сохраняется"],
+    controls: [["mu", "Коэффициент трения μ", 0, 0.5, 0.05, 0.2, ""]],
+    state: null,
+    show(v) {
+      const k = 200, m = 0.5, s = this.state ||= { x: 0.1, u: 0, mu: v.mu, rest: 0 };
+      if (s.mu !== v.mu) Object.assign(s, { x: 0.1, u: 0, mu: v.mu, rest: 0 });
+      for (let i = 0; i < 16; i++) {
+        const stuck = Math.abs(s.u) < 1e-3 && k * Math.abs(s.x) <= v.mu * m * G;
+        if (stuck) { s.u = 0; s.rest += 0.001; continue; }
+        const force = -k * s.x - v.mu * m * G * Math.sign(s.u || -s.x);
+        s.u += force / m * 0.001;
+        s.x += s.u * 0.001;
+      }
+      if (s.rest > 1) Object.assign(s, { x: 0.1, u: 0, rest: 0 });
+      const energy = k * s.x ** 2 / 2 + m * s.u ** 2 / 2;
+      return { reads: [["Механическая энергия", `${num(energy)} Дж`], ["Перешло в тепло", `${num(Math.max(1 - energy, 0))} Дж`], ["Скорость", `${num(Math.abs(s.u))} м/с`]],
+        comment: v.mu ? "Трение есть: механическая энергия падает. Закон сохранения писать нельзя, нужен закон изменения энергии." : "Трения нет: механическая энергия не меняется и закон сохранения работает." };
+    },
+    draw(c, w, h, v, t, css) {
+      const y = h * 0.62, wall = w * 0.08, zero = w * 0.55, x = zero + this.state.x * w * 2;
+      c.strokeStyle = css("--ink");
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(wall, h * 0.25); c.lineTo(wall, y + h * 0.1); c.lineTo(w * 0.95, y + h * 0.1);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(wall, y);
+      for (let i = 1; i <= 14; i++) c.lineTo(wall + (x - wall) * i / 14, y + (i === 14 ? 0 : i % 2 ? -10 : 10));
+      c.stroke();
+      c.fillStyle = css("--solid");
+      c.fillRect(x, y - h * 0.09, h * 0.19, h * 0.19);
+    },
+  },
+  {
+    id: "shell", topic: "Законы сохранения", title: "Разрыв гранаты",
+    text: "Граната 2 кг летит горизонтально со скоростью 20 м/с и разрывается на осколки 0,5 кг и 1,5 кг. Лёгкий осколок летит вперёд со скоростью 100 м/с. Найди скорость второго осколка.",
+    blocks: [
+      FRAME("Систему отсчёта, связанную с гранатой, считаем инерциальной", "На гранату действует сила тяжести, она движется с ускорением, а после разрыва этой системы нет."),
+      POINT("размеры гранаты малы по сравнению с траекторией"),
+      { title: "Какой закон нужен", options: [
+        ["Закон сохранения импульса", true, "Верно, но его применимость надо обосновать."],
+        ["Закон сохранения механической энергии", false, "При разрыве выделяется энергия взрыва, механическая энергия увеличивается."],
+      ] },
+      { title: "Почему импульс сохраняется, хотя есть сила тяжести", options: [
+        ["Время разрыва мало, внутренние силы велики, и импульсом силы тяжести можно пренебречь", true, "Верно. Именно это обоснование чаще всего пропускают."],
+        ["Система замкнута, внешних сил нет", false, "Сила тяжести есть, система не замкнута."],
+        ["Сила тяжести перпендикулярна скорости", false, "Это верно только в момент разрыва и не объясняет сохранение полного импульса."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Гранату и осколки считаем материальными точками, сопротивлением воздуха пренебрегаем. На систему действует внешняя сила тяжести, но время разрыва мало, а внутренние силы велики, поэтому изменением импульса от силы тяжести можно пренебречь и применять закон сохранения импульса. Механическая энергия не сохраняется, потому что при разрыве выделяется энергия взрыва.",
+    solution: "В проекции на направление полёта: 2 · 20 = 0,5 · 100 + 1,5 · v.\nОтсюда v ≈ −6,7 м/с: второй осколок летит назад со скоростью 6,7 м/с.",
+    checks: ["Назвал инерциальную систему отсчёта", "Назвал модель материальной точки", "Сказал, что система не замкнута из-за силы тяжести", "Объяснил, почему импульсом силы тяжести можно пренебречь"],
+    controls: [["tau", "Время разрыва", 0.01, 1, 0.01, 0.01, "с"]],
+    show(v) {
+      const p = 40, push = 2 * G * v.tau, part = push / p * 100;
+      return { p, push, reads: [["Импульс гранаты", `${num(p, 0)} кг·м/с`], ["Импульс силы тяжести", `${num(push, 1)} кг·м/с`], ["Доля", `${num(part, 1)} %`]],
+        comment: part < 2 ? "Разрыв короткий: импульс силы тяжести почти не виден, им можно пренебречь." : "Время большое: импульс силы тяжести заметен, просто так писать закон сохранения уже нельзя." };
+    },
+    draw(c, w, h, v, t, css, shown) {
+      const x = w * 0.15, y = h * 0.35, unit = w * 0.65 / shown.p;
+      const arrow = (x1, y1, x2, y2, color) => {
+        c.strokeStyle = c.fillStyle = color;
+        c.lineWidth = 3;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        c.beginPath(); c.moveTo(x2, y2);
+        c.lineTo(x2 - 10 * Math.cos(angle - 0.4), y2 - 10 * Math.sin(angle - 0.4));
+        c.lineTo(x2 - 10 * Math.cos(angle + 0.4), y2 - 10 * Math.sin(angle + 0.4));
+        c.fill();
+      };
+      arrow(x, y, x + shown.p * unit, y, css("--accent"));
+      arrow(x + shown.p * unit, y, x + shown.p * unit, y + shown.push * unit, css("--hit"));
+      c.fillStyle = css("--solid");
+      c.beginPath(); c.arc(x, y, 10, 0, 7); c.fill();
+      c.fillStyle = css("--muted");
+      c.font = "14px system-ui, sans-serif";
+      c.fillText("импульс гранаты", x, y - 16);
+      c.fillText("импульс силы тяжести", Math.max(x, x + shown.p * unit - 150), y + shown.push * unit + 20);
+    },
+  },
+  {
+    id: "bullet", topic: "Законы сохранения", title: "Пуля в бруске",
+    text: "Пуля 10 г летит горизонтально со скоростью 300 м/с и застревает в бруске 1 кг, висящем на длинной нити. На какую высоту поднимется брусок, g = 10 м/с²?",
+    blocks: [
+      FRAME("Систему отсчёта, связанную с бруском, считаем инерциальной", "После удара брусок движется с ускорением, поэтому эта система не инерциальная."),
+      POINT("тела движутся поступательно, вращение не важно"),
+      { title: "Какие законы нужны для удара и для подъёма", options: [
+        ["При ударе закон сохранения импульса, при подъёме закон сохранения механической энергии", true, "Верно. Задача делится на два этапа."],
+        ["На всём пути закон сохранения механической энергии", false, "При застревании пули часть энергии переходит в тепло."],
+        ["На всём пути закон сохранения импульса", false, "При подъёме на брусок действуют нескомпенсированные силы, импульс меняется."],
+      ] },
+      { title: "Почему при ударе сохраняется импульс", options: [
+        ["Удар короткий, нить вертикальна, а внешние силы вертикальны, поэтому в горизонтальной проекции импульс сохраняется", true, "Верно. Обоснование идёт для проекции на горизонтальную ось."],
+        ["Брусок висит и поэтому на него не действуют силы", false, "Сила тяжести и натяжение действуют, но они вертикальны."],
+      ] },
+      { title: "Почему при подъёме сохраняется энергия", options: [
+        ["Сопротивлением воздуха пренебрегаем, а натяжение перпендикулярно скорости и работы не совершает", true, "Верно. Работу совершает только сила тяжести."],
+        ["Натяжение равно нулю", false, "Натяжение не равно нулю, но его работа равна нулю."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Пулю и брусок считаем материальными точками. Удар короткий, за это время нить остаётся вертикальной, а внешние силы вертикальны, поэтому в проекции на горизонтальную ось импульс системы сохраняется. Механическая энергия при ударе не сохраняется, потому что удар неупругий. При подъёме сопротивлением воздуха пренебрегаем, а сила натяжения перпендикулярна скорости и работы не совершает, поэтому механическая энергия сохраняется.",
+    solution: "mv = (m + M)u, откуда u ≈ 2,97 м/с.\n(m + M)u²/2 = (m + M)gh, откуда h = u²/(2g) ≈ 0,44 м.",
+    checks: ["Назвал инерциальную систему отсчёта", "Разделил задачу на удар и подъём", "Обосновал сохранение импульса при ударе", "Объяснил, почему энергия не сохраняется при ударе", "Объяснил, почему энергия сохраняется при подъёме"],
+    controls: [["m", "Масса пули", 5, 15, 1, 10, "г"], ["v", "Скорость пули", 100, 300, 10, 300, "м/с"]],
+    show(v) {
+      const m = v.m / 1000, M = 1, u = m * v.v / (m + M), before = m * v.v ** 2 / 2, after = (m + M) * u ** 2 / 2;
+      return { u, height: u ** 2 / (2 * G), reads: [["Энергия пули", `${num(before, 0)} Дж`], ["Энергия после удара", `${num(after, 1)} Дж`], ["Ушло в тепло", `${num((1 - after / before) * 100, 0)} %`], ["Высота", `${num(u ** 2 / (2 * G))} м`]],
+        comment: "Почти вся энергия пули уходит в тепло при ударе, поэтому закон сохранения энергии нельзя применять ко всему процессу." };
+    },
+    draw(c, w, h, v, t, css, shown) {
+      const L = 2, top = h * 0.05, length = h * 0.62, cx = w * 0.55;
+      const limit = Math.acos(1 - shown.height / L), cycle = t % 4;
+      const flight = cycle < 1, angle = flight ? 0 : limit * Math.sin(Math.min((cycle - 1) * 1.2, Math.PI));
+      const x = cx + Math.sin(angle) * length, y = top + Math.cos(angle) * length;
+      c.strokeStyle = css("--ink");
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(cx, top); c.lineTo(x, y); c.stroke();
+      c.fillStyle = css("--solid");
+      c.fillRect(x - 24, y, 48, h * 0.16);
+      if (flight) {
+        c.fillStyle = css("--hit");
+        c.fillRect(w * 0.05 + (cx - 24 - w * 0.05) * cycle - 8, y + h * 0.07, 16, 5);
+      }
+    },
+  },
+  {
+    id: "lever", topic: "Статика", title: "Рычаг с грузами",
+    text: "На лёгком рычаге слева на расстоянии 20 см от опоры висит груз 3 кг, справа на расстоянии 30 см висит второй груз. Рычаг в равновесии. Найди массу второго груза и силу реакции опоры, g = 10 м/с².",
+    blocks: [
+      FRAME("Систему отсчёта называть не нужно, рычаг же покоится", "Покой тоже определяется относительно системы отсчёта, поэтому её надо назвать."),
+      SOLID,
+      { title: "Какие законы нужны", options: [
+        ["Два условия равновесия: сумма сил и сумма моментов равны нулю", true, "Верно. Для твёрдого тела нужны оба условия."],
+        ["Только равенство сил слева и справа", false, "Рычаг может повернуться и при равных силах: важны плечи."],
+        ["Закон сохранения механической энергии", false, "Рычаг покоится, здесь нет движения для этого закона."],
+      ] },
+      { title: "Почему сила на рычаг от груза равна mg", options: [
+        ["Груз покоится, значит натяжение нити равно mg, а по третьему закону нить тянет рычаг с той же силой", true, "Верно. Это та самая связь через третий закон Ньютона."],
+        ["Сила тяжести груза приложена прямо к рычагу", false, "Сила тяжести приложена к грузу, к рычагу приложена сила со стороны нити."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Рычаг считаем абсолютно твёрдым телом, так как для моментов важны точки приложения сил. Рычаг покоится, поэтому выполняются два условия равновесия: сумма сил и сумма моментов сил равны нулю. Грузы покоятся, поэтому натяжение нити равно mg, а по третьему закону Ньютона нить тянет рычаг с той же силой.",
+    solution: "Моменты относительно опоры: 3 · 10 · 0,2 = m₂ · 10 · 0,3, откуда m₂ = 2 кг.\nСилы: N = (3 + 2) · 10 = 50 Н.",
+    checks: ["Назвал инерциальную систему отсчёта", "Объяснил модель твёрдого тела", "Назвал оба условия равновесия", "Связал силу на рычаг с mg через третий закон Ньютона"],
+    controls: [["m1", "Левый груз", 1, 5, 0.5, 3, "кг"], ["d1", "Левое плечо", 10, 40, 10, 20, "см"], ["m2", "Правый груз", 1, 5, 0.5, 2, "кг"], ["d2", "Правое плечо", 10, 40, 10, 30, "см"]],
+    show(v) {
+      const left = v.m1 * G * v.d1 / 100, right = v.m2 * G * v.d2 / 100, even = Math.abs(left - right) < 1e-9;
+      return { tilt: clamp((right - left) * 0.04, -0.3, 0.3), reads: [["Момент слева", `${num(left, 1)} Н·м`], ["Момент справа", `${num(right, 1)} Н·м`], ["Сила на опору", `${num((v.m1 + v.m2) * G, 0)} Н`]],
+        comment: even ? "Моменты равны: рычаг в равновесии." : "Моменты разные: сумма моментов не равна нулю, и рычаг поворачивается. Условие равновесия не выполнено." };
+    },
+    draw(c, w, h, v, t, css, shown) {
+      const cx = w / 2, cy = h * 0.35, scale = w * 0.009;
+      const end = d => [cx + Math.cos(shown.tilt) * d * scale, cy + Math.sin(shown.tilt) * d * scale];
+      const [lx, ly] = end(-v.d1), [rx, ry] = end(v.d2);
+      c.strokeStyle = css("--ink");
+      c.lineWidth = 4;
+      c.beginPath(); c.moveTo(lx, ly); c.lineTo(rx, ry); c.stroke();
+      c.lineWidth = 2;
+      c.fillStyle = css("--line");
+      c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx - 18, h * 0.92); c.lineTo(cx + 18, h * 0.92); c.fill();
+      for (const [x, y, m] of [[lx, ly, v.m1], [rx, ry, v.m2]]) {
+        const size = 14 + m * 7;
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + h * 0.2); c.stroke();
+        c.fillStyle = css("--solid");
+        c.fillRect(x - size / 2, y + h * 0.2, size, size);
+      }
+    },
+  },
+  {
+    id: "beam", topic: "Статика", title: "Неоднородная балка",
+    text: "Неоднородная балка массой 100 кг и длиной 5 м лежит концами на двух опорах. Центр тяжести находится в 2 м от левого конца. Найди силы реакции опор, g = 10 м/с².",
+    blocks: [
+      FRAME("Систему отсчёта называть не нужно, балка же покоится", "Покой тоже определяется относительно системы отсчёта, поэтому её надо назвать."),
+      SOLID,
+      { title: "Какие законы нужны", options: [
+        ["Сумма сил равна нулю и сумма моментов равна нулю", true, "Верно. Здесь две неизвестные силы, поэтому нужны оба условия."],
+        ["Силы на опорах равны половине веса", false, "Это верно только для однородной балки. Здесь центр тяжести смещён."],
+      ] },
+      { title: "Относительно какой оси считать моменты", options: [
+        ["Можно любой, удобно через точку опоры: момент этой силы равен нулю", true, "Верно. В равновесии условие моментов выполняется для любой оси."],
+        ["Только через центр тяжести", false, "Для тела в равновесии подходит любая ось."],
+      ] },
+    ],
+    model: "Систему отсчёта, связанную с Землёй, считаем инерциальной. Балку считаем абсолютно твёрдым телом: её форма не меняется, а для моментов важны точки приложения сил. Балка покоится, поэтому сумма сил и сумма моментов сил равны нулю. Балка неоднородная, поэтому сила тяжести приложена к центру тяжести, а не к середине. Момент сил можно считать относительно любой оси, удобно взять ось через точку опоры.",
+    solution: "Моменты относительно левой опоры: R₂ · 5 = 1000 · 2, откуда R₂ = 400 Н.\nСилы: R₁ = 1000 − 400 = 600 Н.",
+    checks: ["Назвал инерциальную систему отсчёта", "Объяснил модель твёрдого тела", "Назвал оба условия равновесия", "Объяснил, куда приложена сила тяжести", "Объяснил выбор оси для моментов"],
+    controls: [["x", "Центр тяжести от левого конца", 0.5, 4.5, 0.5, 2, "м"]],
+    show(v) {
+      const right = 1000 * v.x / 5, left = 1000 - right;
+      return { left, right, reads: [["Левая опора", `${num(left, 0)} Н`], ["Правая опора", `${num(right, 0)} Н`], ["Сумма", "1000 Н"]],
+        comment: v.x === 2.5 ? "Центр тяжести посередине: силы равны. Только в этом случае можно делить вес пополам." : "Чем ближе центр тяжести к опоре, тем больше на неё сила. Сумма сил не меняется." };
+    },
+    draw(c, w, h, v, t, css, shown) {
+      const a = w * 0.12, b = w * 0.88, y = h * 0.5, unit = h * 0.0003;
+      const arrow = (x, y1, y2, color) => {
+        c.strokeStyle = c.fillStyle = color;
+        c.lineWidth = 3;
+        c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke();
+        const side = y2 > y1 ? -9 : 9;
+        c.beginPath(); c.moveTo(x, y2); c.lineTo(x - 6, y2 + side); c.lineTo(x + 6, y2 + side); c.fill();
+      };
+      c.fillStyle = css("--solid");
+      c.fillRect(a, y, b - a, h * 0.08);
+      c.fillStyle = css("--line");
+      for (const x of [a, b]) { c.beginPath(); c.moveTo(x, y + h * 0.08); c.lineTo(x - 16, h * 0.9); c.lineTo(x + 16, h * 0.9); c.fill(); }
+      arrow(a, y, y - shown.left * unit, css("--accent"));
+      arrow(b, y, y - shown.right * unit, css("--accent"));
+      const cg = a + (b - a) * v.x / 5;
+      arrow(cg, y + h * 0.04, y + h * 0.04 + 1000 * unit * 0.8, css("--hit"));
+    },
+  },
+];
+
+const passed = () => new Set((load("t26:done") || "").split(",").filter(Boolean));
+function catalog() {
+  const done = passed();
+  $("lead").textContent = `Пройдено ${SITUATIONS.filter(s => done.has(s.id)).length} из ${SITUATIONS.length}. В каждой ситуации 4 шага: опыт, сборка, образец и свой текст.`;
+  $("catalog").replaceChildren(...SITUATIONS.map(s => {
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = "#" + s.id;
+    const title = document.createElement("b"), topic = document.createElement("span");
+    title.textContent = s.title;
+    topic.textContent = s.topic;
+    a.append(title, topic);
+    if (done.has(s.id)) { const mark = document.createElement("i"); mark.textContent = "✓ пройдено"; a.append(mark); }
+    return a;
+  }));
+}
+
+const STEPS = ["Опыт", "Сборка", "Образец", "Свой текст"];
+let current = null, step = 0, values = {}, started = 0, frame = 0, ready = false;
+const color = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function goTo(n) {
+  step = n;
+  STEPS.forEach((_, i) => { $(`step${i}`).hidden = i !== n; });
+  [...$("steps").children].forEach((b, i) => {
+    b.disabled = i > 1 && !ready;
+    if (i === n) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+  });
+  if (n === 0) animate();
+}
+function animate() {
+  cancelAnimationFrame(frame);
+  if (!current || step !== 0) return;
+  const box = $("stage"), width = box.clientWidth || 600, height = box.clientHeight || 340, ratio = devicePixelRatio || 1;
+  if (box.width !== Math.round(width * ratio)) { box.width = Math.round(width * ratio); box.height = Math.round(height * ratio); }
+  const c = box.getContext("2d");
+  c.setTransform(ratio, 0, 0, ratio, 0, 0);
+  c.clearRect(0, 0, width, height);
+  const shown = current.show(values);
+  current.draw(c, width, height, values, (performance.now() - started) / 1000, color, shown);
+  const reads = shown.reads.map(([label, value]) => `<div class="read"><span>${label}</span><b>${value}</b></div>`).join("");
+  if ($("reads").innerHTML !== reads) $("reads").innerHTML = reads;
+  if ($("comment").textContent !== shown.comment) $("comment").textContent = shown.comment;
+  frame = requestAnimationFrame(animate);
+}
+function controls(s) {
+  values = {};
+  $("controls").replaceChildren(...s.controls.map(([id, label, min, max, stepSize, start, unit]) => {
+    values[id] = start;
+    const field = document.createElement("div");
+    field.className = "field";
+    const name = document.createElement("label"), out = document.createElement("output"), input = document.createElement("input");
+    name.htmlFor = "c-" + id;
+    name.textContent = label;
+    const text = () => { out.textContent = `${String(values[id]).replace(".", ",")} ${unit}`.trim(); };
+    Object.assign(input, { type: "range", id: "c-" + id, min, max, step: stepSize, value: start });
+    input.addEventListener("input", () => { values[id] = Number(input.value); started = performance.now(); text(); });
+    text();
+    name.append(out);
+    field.append(name, input);
+    return field;
+  }));
+}
+function assembly(s) {
+  const left = new Map();
+  $("blocks").replaceChildren(...s.blocks.map((block, i) => {
+    const box = document.createElement("div");
+    box.className = "block";
+    const title = document.createElement("h2"), why = document.createElement("p");
+    title.textContent = block.title;
+    why.className = "why";
+    left.set(i, block.options.filter(o => o[1]).length);
+    box.append(title, ...block.options.map(([text, ok, reason]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "option";
+      b.textContent = text;
+      b.addEventListener("click", () => {
+        b.classList.add(ok ? "right" : "wrong");
+        why.className = `why ${ok ? "right" : "wrong"}`;
+        why.textContent = reason;
+        if (ok && !b.dataset.counted) {
+          b.dataset.counted = "1";
+          left.set(i, left.get(i) - 1);
+          if ([...left.values()].every(n => !n)) { ready = true; $("toModel").disabled = false; goTo(1); }
+        }
+      });
+      return b;
+    }), why);
+    return box;
+  }));
+}
+function selfCheck(s) {
+  const key = "t26:own:" + s.id;
+  $("own").value = load(key) || "";
+  $("done").hidden = true;
+  const finish = () => {
+    if (!boxes.every(b => b.querySelector("input").checked) || !$("own").value.trim()) return;
+    save("t26:done", [...passed().add(s.id)].join(","));
+    $("done").hidden = false;
+  };
+  $("own").oninput = () => { save(key, $("own").value); finish(); };
+  const boxes = s.checks.map(text => {
+    const row = document.createElement("label"), box = document.createElement("input");
+    row.className = "check";
+    box.type = "checkbox";
+    box.addEventListener("change", finish);
+    row.append(box, text);
+    return row;
+  });
+  $("checks").replaceChildren(...boxes);
+}
+function route() {
+  cancelAnimationFrame(frame);
+  current = SITUATIONS.find(s => "#" + s.id === location.hash) || null;
+  $("home").hidden = Boolean(current);
+  $("task").hidden = !current;
+  scrollTo(0, 0);
+  if (!current) { catalog(); return; }
+  ready = false;
+  started = performance.now();
+  $("title").textContent = current.title;
+  $("text").textContent = current.text;
+  $("toModel").disabled = true;
+  $("model").textContent = current.model;
+  $("solution").textContent = current.solution;
+  controls(current);
+  assembly(current);
+  selfCheck(current);
+  goTo(0);
+}
+$("steps").replaceChildren(...STEPS.map((name, i) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = name;
+  b.addEventListener("click", () => goTo(i));
+  return b;
+}));
+document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => { goTo(Number(b.dataset.go)); scrollTo(0, 0); }));
+addEventListener("hashchange", route);
+addEventListener("resize", () => { if (step === 0) animate(); });
+route();
+
+// Без библиотеки Telegram: просим открыть сайт на весь экран
+try {
+  window.TelegramWebviewProxy?.postEvent("web_app_ready", "");
+  window.TelegramWebviewProxy?.postEvent("web_app_expand", "");
+} catch {}
+</script>
+</body>
+</html>
