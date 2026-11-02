@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Геометрия для школьников: углы, окружности и доказательства с рисунками.">
+<title>Геометрия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и задания 26. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 15px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+.tabs button { padding: 9px 6px; font-size: 14px; border-color: var(--line); color: var(--ink); }
+.tabs button[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+.option { text-align: left; font-weight: 500; font-size: 15px; border-color: var(--line); color: var(--ink); padding: 10px 12px; }
+.option.right { border-color: var(--good); color: var(--good); }
+.option.wrong { border-color: var(--hit); color: var(--hit); }
+.block { display: grid; gap: 8px; }
+.row { display: flex; gap: 8px; }
+.row > * { flex: 1; min-width: 0; }
+.row input { font: 500 18px var(--mono); padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink); width: 100%; }
+.why { font-size: 15px; }
+.why.right { color: var(--good); }
+.why.wrong { color: var(--hit); }
+.reads { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.read { background: var(--sheet); padding: 8px 10px; min-width: 0; }
+.read span { display: block; color: var(--muted); font-size: 12px; }
+.read b { font: 500 17px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+.chain { margin: 0; padding-left: 22px; display: grid; gap: 2px; }
+.card { text-align: left; color: var(--ink); border-color: var(--line); font-weight: 500; }
+.card:hover { border-color: var(--accent); }
+.verdict { font-weight: 600; }
+svg.fig { display: block; width: 100%; height: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; user-select: none; -webkit-user-select: none; }
+.fig .s { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fig .thin { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.fig .dash { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 5 5; }
+.fig .new { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linecap: round; }
+.fig .mark { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.fig .find { stroke: var(--hit); stroke-width: 2.5; fill: none; }
+.fig .fill { fill: var(--accent); fill-opacity: .14; stroke: var(--accent); stroke-width: 1.5; }
+.fig .dot { fill: var(--ink); }
+.fig text { fill: var(--ink); font: 500 15px var(--body); text-anchor: middle; dominant-baseline: central; }
+.fig text.x { fill: var(--hit); font-weight: 600; }
+.fig .grip { fill: var(--accent); stroke: var(--sheet); stroke-width: 2; }
+.fig .hit { fill: transparent; cursor: grab; touch-action: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>Геометрия</h1>
+    <p class="lead">Углы, окружности и доказательства с рисунками. Это тренировка: опыт и стрик в боте здесь не начисляются.</p>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Разделы"></nav>
+  <main id="view" style="display:grid;gap:16px"></main>
+</div>
+<script>
+"use strict";
+// Режим из бота: в классах показываем темы до этого класса, в ОГЭ до девятого
+const params = new URLSearchParams(location.search);
+const mode = params.get("mode");
+const LIMIT = { oge: 9, ege: 11, ege_base: 11 }[mode] || Number(mode) || 11;
+
+// В Telegram вертикальный жест сворачивает страницу и мешает тянуть точки на рисунке
+try { window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior", JSON.stringify({ allow_vertical_swipe: false })); } catch {}
+
+const view = document.getElementById("view");
+const rand = (a, b, step = 1) => a + step * Math.floor(Math.random() * (Math.floor((b - a) / step) + 1));
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const shuffle = list => list.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(p => p[1]);
+const rad = d => d * Math.PI / 180;
+const on = (o, r, d) => [o[0] + r * Math.cos(rad(d)), o[1] - r * Math.sin(rad(d))];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const dir = (a, b) => Math.atan2(a[1] - b[1], b[0] - a[0]) * 180 / Math.PI;
+const fix = v => v.toFixed(1);
+
+// ---------- рисунок ----------
+const seg = (a, b, cls = "s") => `<line class="${cls}" x1="${fix(a[0])}" y1="${fix(a[1])}" x2="${fix(b[0])}" y2="${fix(b[1])}"/>`;
+const shape = (pts, cls = "s") => `<polygon class="${cls}" points="${pts.map(p => p.map(fix).join(",")).join(" ")}"/>`;
+const ring = (c, r, cls = "s") => `<circle class="${cls}" cx="${fix(c[0])}" cy="${fix(c[1])}" r="${fix(r)}"/>`;
+const dot = p => `<circle class="dot" cx="${fix(p[0])}" cy="${fix(p[1])}" r="3"/>`;
+const say = (p, text, cls = "") => `<text class="${cls}" x="${fix(p[0])}" y="${fix(p[1])}">${text}</text>`;
+
+function between(v, a, b) {  // меньший угол при вершине v: откуда начинать и насколько идти
+  const from = dir(v, a);
+  let turn = dir(v, b) - from;
+  while (turn <= -180) turn += 360;
+  while (turn > 180) turn -= 360;
+  return [from, turn];
+}
+function angle(v, a, b) { return Math.abs(between(v, a, b)[1]); }
+function mark(v, a, b, text, find = false, r = 26) {  // дуга угла и подпись на биссектрисе
+  const [from, turn] = between(v, a, b);
+  const s = on(v, r, from), e = on(v, r, from + turn), label = on(v, r + 15, from + turn / 2);
+  const arc = `<path class="${find ? "find" : "mark"}" d="M${fix(s[0])} ${fix(s[1])}A${r} ${r} 0 0 ${turn > 0 ? 0 : 1} ${fix(e[0])} ${fix(e[1])}"/>`;
+  return arc + (text ? say(label, text, find ? "x" : "") : "");
+}
+function square(v, a, b, size = 12) {  // значок прямого угла
+  const u = on(v, size, dir(v, a)), w = on(v, size, dir(v, b));
+  return `<polyline class="mark" points="${[u, [u[0] + w[0] - v[0], u[1] + w[1] - v[1]], w].map(p => p.map(fix).join(",")).join(" ")}"/>`;
+}
+const fig = (body, h = 240) => `<svg class="fig" viewBox="0 0 360 ${h}" role="img">${body}</svg>`;
+
+// Треугольник с заданными углами при основании, вписанный в рисунок
+function triangle(a, b) {
+  const c = 180 - a - b, side = Math.sin(rad(b)) / Math.sin(rad(c));
+  const top = [side * Math.cos(rad(a)), side * Math.sin(rad(a))];
+  const left = Math.min(0, top[0]), right = Math.max(1, top[0]);
+  const scale = Math.min(280 / (right - left), 170 / top[1]);
+  const x0 = 180 - scale * (left + right) / 2, y0 = 205;
+  return [[x0, y0], [x0 + scale, y0], [x0 + scale * top[0], y0 - scale * top[1]]];
+}
+
+// ---------- задачи: x всегда целое ----------
+const CENTER = [180, 120], R = 95;
+const TASKS = [
+  { tab: "angles", grade: 7, make() {
+    const a = pick([30, 40, 50, 60, 70, 80, 100, 110, 120, 130, 140, 150]), O = [180, 180], P = on(O, 130, a), A = [30, 180], B = [330, 180];
+    return { text: "Лучи OA и OB образуют прямую. Найди угол x.", svg: fig(seg(A, B) + seg(O, P) + mark(O, B, P, a + "°") + mark(O, A, P, "x", true) + dot(O) + say([O[0], 200], "O") + say([20, 195], "A") + say([340, 195], "B")),
+      answer: 180 - a, how: `Смежные углы в сумме дают 180°: 180 − ${a} = ${180 - a}.` };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const a = rand(30, 150, 5), O = [180, 120], r = 140, ray = d => on(O, r * (d % 180 ? 0.75 : 1), d);
+    return { text: "Две прямые пересекаются. Найди угол x.", svg: fig(seg(ray(0), ray(180)) + seg(ray(a), ray(a + 180)) + mark(O, ray(0), ray(a), a + "°") + mark(O, ray(180), ray(a + 180), "x", true) + dot(O)),
+      answer: a, how: "Вертикальные углы равны." };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const t = pick([40, 50, 55, 60, 65, 70, 75, 110, 115, 120, 125, 130, 140]), kind = pick(["same", "cross", "inner"]);
+    const hit = y => [180 + (170 - y) / Math.tan(rad(t)) * 1 - 50 * 0, y], A = hit(170), B = hit(80);
+    const up = (p, d) => on(p, 60, d), left = p => [20, p[1]], right = p => [340, p[1]];
+    const end1 = hit(20), end2 = hit(225);
+    let body = seg(left(A), right(A)) + seg(left(B), right(B)) + seg(end1, end2) + mark(A, right(A), up(A, t), t + "°") + dot(A) + dot(B), answer = t, how = "";
+    if (kind === "same") { body += mark(B, right(B), up(B, t), "x", true); how = "Соответственные углы при параллельных прямых равны."; }
+    if (kind === "cross") { body += mark(B, left(B), up(B, t + 180), "x", true); how = "Накрест лежащие углы при параллельных прямых равны."; }
+    if (kind === "inner") { body += mark(B, right(B), up(B, t + 180), "x", true); answer = 180 - t; how = `Односторонние углы в сумме дают 180°: 180 − ${t} = ${180 - t}.`; }
+    return { text: "Горизонтальные прямые параллельны. Найди угол x.", svg: fig(body), answer, how };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const a = rand(30, 80, 5), b = rand(30, 80, 5), [A, B, C] = triangle(a, b), c = 180 - a - b;
+    return { text: "Найди угол x треугольника.", svg: fig(shape([A, B, C]) + mark(A, B, C, a + "°") + mark(B, A, C, b + "°") + mark(C, A, B, "x", true, 20)), answer: c, how: `Сумма углов треугольника 180°: 180 − ${a} − ${b} = ${c}.` };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const apex = rand(30, 110, 10), base = (180 - apex) / 2, [A, B, C] = triangle(base, base);
+    return { text: "Треугольник равнобедренный: боковые стороны равны. Найди угол x при основании.", svg: fig(shape([A, B, C]) + mark(C, A, B, apex + "°", false, 20) + mark(A, B, C, "x", true)), answer: base, how: `Углы при основании равны: (180 − ${apex}) : 2 = ${base}.` };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const a = rand(40, 70, 5), c = rand(40, 70, 5), [A, B, C] = triangle(a, 180 - a - c), D = [Math.min(B[0] + 60, 345), B[1]];
+    return { text: "Найди внешний угол x треугольника.", svg: fig(shape([A, B, C]) + seg(B, D) + mark(A, B, C, a + "°") + mark(C, A, B, c + "°", false, 20) + mark(B, D, C, "x", true)), answer: a + c, how: `Внешний угол равен сумме двух углов, не смежных с ним: ${a} + ${c} = ${a + c}.` };
+  } },
+  { tab: "angles", grade: 7, make() {
+    const a = rand(25, 65, 5), [A, B, C] = triangle(a, 90);
+    return { text: "Треугольник прямоугольный. Найди угол x.", svg: fig(shape([A, B, C]) + square(B, A, C) + mark(A, B, C, a + "°") + mark(C, A, B, "x", true, 20)), answer: 90 - a, how: `Острые углы в сумме дают 90°: 90 − ${a} = ${90 - a}.` };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const c = rand(40, 160, 10), A = on(CENTER, R, 270 - c / 2), B = on(CENTER, R, 270 + c / 2), C = on(CENTER, R, rand(60, 120, 10));
+    return { text: "O это центр окружности. Найди вписанный угол x.", svg: fig(ring(CENTER, R) + seg(CENTER, A) + seg(CENTER, B) + seg(C, A) + seg(C, B) + mark(CENTER, A, B, c + "°", false, 18) + mark(C, A, B, "x", true) + dot(CENTER) + say([CENTER[0] + 12, CENTER[1] - 12], "O")),
+      answer: c / 2, how: `Вписанный угол равен половине центрального на той же дуге: ${c} : 2 = ${c / 2}.` };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const x = rand(20, 80, 5), c = 2 * x, A = on(CENTER, R, 270 - x), B = on(CENTER, R, 270 + x), C = on(CENTER, R, rand(70, 110, 10));
+    return { text: "O это центр окружности. Найди центральный угол x.", svg: fig(ring(CENTER, R) + seg(CENTER, A) + seg(CENTER, B) + seg(C, A) + seg(C, B) + mark(C, A, B, x + "°") + mark(CENTER, A, B, "x", true, 18) + dot(CENTER) + say([CENTER[0] + 12, CENTER[1] - 12], "O")),
+      answer: c, how: `Центральный угол вдвое больше вписанного: ${x} · 2 = ${c}.` };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const a = rand(20, 70, 5), A = on(CENTER, R, 180), B = on(CENTER, R, 0), C = on(CENTER, R, 2 * a);
+    return { text: "AB это диаметр. Найди угол x.", svg: fig(ring(CENTER, R) + shape([A, B, C]) + square(C, A, B) + mark(A, B, C, a + "°") + mark(B, A, C, "x", true) + dot(CENTER) + say([A[0] - 12, A[1]], "A") + say([B[0] + 12, B[1]], "B")),
+      answer: 90 - a, how: `Угол, опирающийся на диаметр, прямой. Значит, x = 90 − ${a} = ${90 - a}.` };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const x = rand(20, 75, 5), A = on(CENTER, R, 270 - x), B = on(CENTER, R, 270 + x), C = on(CENTER, R, 130), D = on(CENTER, R, 50);
+    return { text: "Найди угол x.", svg: fig(ring(CENTER, R) + seg(C, A) + seg(C, B) + seg(D, A) + seg(D, B) + mark(C, A, B, x + "°") + mark(D, A, B, "x", true)), answer: x, how: "Вписанные углы, опирающиеся на одну дугу, равны." };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const a = rand(50, 130, 5), turn = rand(-20, 20, 10), A = on(CENTER, R, 180 + turn), B = on(CENTER, R, turn - a), C = on(CENTER, R, turn), D = on(CENTER, R, turn + a);
+    return { text: "Четырёхугольник вписан в окружность. Найди угол x.", svg: fig(ring(CENTER, R) + shape([A, B, C, D]) + mark(A, B, D, a + "°") + mark(C, B, D, "x", true)), answer: 180 - a, how: `Противоположные углы вписанного четырёхугольника в сумме дают 180°: 180 − ${a} = ${180 - a}.` };
+  } },
+  { tab: "circle", grade: 7, make() {
+    const a = rand(30, 60, 5), O = [90, 120], r = 60, A = on(O, r, 90), B = [O[0] + r * Math.tan(rad(a)), A[1]], T1 = [20, A[1]], T2 = [345, A[1]];
+    return { text: "Прямая касается окружности в точке A, O это центр. Найди угол x.", svg: fig(ring(O, r) + seg(T1, T2) + seg(O, A) + seg(O, B) + square(A, O, T2) + mark(O, A, B, a + "°", false, 20) + mark(B, O, A, "x", true) + say([O[0] - 12, O[1] + 6], "O") + say([A[0], A[1] - 14], "A")),
+      answer: 90 - a, how: `Радиус в точку касания перпендикулярен касательной. Значит, x = 90 − ${a} = ${90 - a}.` };
+  } },
+  { tab: "circle", grade: 8, make() {
+    const t = rand(30, 65, 5), O = [120, 120], r = 70, A = on(O, r, t), B = on(O, r, -t), P = [O[0] + r / Math.cos(rad(t)), O[1]];
+    return { text: "PA и PB это касательные, O это центр. Найди угол x.", svg: fig(ring(O, r) + seg(P, A) + seg(P, B) + seg(O, A) + seg(O, B) + square(A, O, P) + square(B, O, P) + mark(P, A, B, 180 - 2 * t + "°", false, 22) + mark(O, A, B, "x", true, 18) + say([O[0] - 12, O[1]], "O") + say([P[0] + 10, P[1]], "P")),
+      answer: 2 * t, how: `В четырёхугольнике OAPB два прямых угла, поэтому x = 180 − ${180 - 2 * t} = ${2 * t}.` };
+  } },
+];
+
+function trainer(tab, host) {
+  const pool = TASKS.filter(t => t.tab === tab && t.grade <= LIMIT);
+  let done = 0, right = 0, last = null;
+  function next() {
+    const made = shuffle(pool).find(t => t !== last || pool.length === 1);
+    last = made;
+    const task = made.make();
+    let tried = false;
+    host.innerHTML = `<section class="sheet"><h2>Задача</h2><p>${task.text}</p>${task.svg}
+      <form class="row"><input inputmode="numeric" autocomplete="off" aria-label="Ответ в градусах" placeholder="x в градусах"><button class="main" type="submit">Проверить</button></form>
+      <p class="why" hidden></p><button class="more" hidden>Следующая задача</button><p class="note"></p></section>`;
+    const form = host.querySelector("form"), why = host.querySelector(".why"), more = host.querySelector(".more"), note = host.querySelector(".note");
+    note.textContent = done ? `Решено верно с первой попытки: ${right} из ${done}` : "";
+    more.onclick = next;
+    form.onsubmit = e => {
+      e.preventDefault();
+      const value = Number(form.elements[0].value.replace(",", ".").replace("°", "").trim());
+      const ok = value === task.answer;
+      if (!tried) { tried = true; done++; right += ok; }
+      why.hidden = false;
+      why.className = "why " + (ok ? "right" : "wrong");
+      why.textContent = ok ? `Верно! ${task.how}` : "Пока нет. Посмотри на рисунок и попробуй ещё раз.";
+      if (!ok && form.dataset.tried) why.textContent = `Ответ ${task.answer}°. ${task.how}`;
+      form.dataset.tried = "1";
+      more.hidden = !ok && why.textContent.startsWith("Пока");
+    };
+  }
+  next();
+}
+
+// ---------- перетаскивание точек ----------
+function draggable(svg, list, move, draw) {
+  const point = e => { const m = svg.getScreenCTM().inverse(); return [m.a * e.clientX + m.c * e.clientY + m.e, m.b * e.clientX + m.d * e.clientY + m.f]; };
+  let held = -1;
+  svg.addEventListener("pointerdown", e => {
+    const i = e.target.dataset?.i;
+    if (i === undefined) return;
+    held = Number(i);
+    svg.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  svg.addEventListener("pointermove", e => { if (held >= 0) { list[held] = move(point(e), held); draw(); } });
+  const drop = () => { held = -1; };
+  svg.addEventListener("pointerup", drop);
+  svg.addEventListener("pointercancel", drop);
+}
+const grips = list => list.map((p, i) => `<circle class="grip" cx="${fix(p[0])}" cy="${fix(p[1])}" r="8"/><circle class="hit" data-i="${i}" cx="${fix(p[0])}" cy="${fix(p[1])}" r="24"/>`).join("");
+const read = (label, value) => `<div class="read"><span>${label}</span><b>${value}</b></div>`;
+
+function circleDemo(host) {
+  host.innerHTML = `<section class="sheet"><h2>Потяни точки A, B и C</h2>
+    <p>Вписанный угол всегда равен половине дуги, на которую опирается. Двигай C по окружности: пока дуга AB та же, угол не меняется.</p>
+    <svg class="fig" viewBox="0 0 360 240" role="img" aria-label="Окружность с вписанным углом"></svg><div class="reads"></div></section>`;
+  const svg = host.querySelector("svg"), reads = host.querySelector(".reads");
+  const pts = [on(CENTER, R, 220), on(CENTER, R, 320), on(CENTER, R, 100)];
+  function draw() {
+    const [A, B, C] = pts;
+    const norm = d => (d + 360) % 360, a = norm(dir(CENTER, A)), b = norm(dir(CENTER, B)), c = norm(dir(CENTER, C));
+    const arc = norm(b - a), arcAB = norm(c - a) < arc ? 360 - arc : arc;  // дуга без точки C
+    const label = (p, t) => say(on(CENTER, R + 16, dir(CENTER, p)), t);
+    svg.innerHTML = ring(CENTER, R) + seg(CENTER, A, "thin") + seg(CENTER, B, "thin") + seg(C, A) + seg(C, B) + mark(C, A, B, "", true) + dot(CENTER) + grips(pts) + label(A, "A") + label(B, "B") + label(C, "C");
+    reads.innerHTML = read("Дуга AB без точки C", Math.round(arcAB) + "°") + read("Вписанный угол ACB", Math.round(angle(C, A, B)) + "°") + read("Половина дуги", Math.round(arcAB / 2) + "°");
+  }
+  draggable(svg, pts, p => on(CENTER, R, dir(CENTER, p)), draw);
+  draw();
+}
+
+// ---------- вписанная и описанная окружность ----------
+function circumcircle(A, B, C) {
+  const d = 2 * (A[0] * (B[1] - C[1]) + B[0] * (C[1] - A[1]) + C[0] * (A[1] - B[1]));
+  if (Math.abs(d) < 1) return null;
+  const s = p => p[0] * p[0] + p[1] * p[1];
+  const O = [(s(A) * (B[1] - C[1]) + s(B) * (C[1] - A[1]) + s(C) * (A[1] - B[1])) / d, (s(A) * (C[0] - B[0]) + s(B) * (A[0] - C[0]) + s(C) * (B[0] - A[0])) / d];
+  return [O, dist(O, A)];
+}
+function incircle(A, B, C) {
+  const a = dist(B, C), b = dist(A, C), c = dist(A, B), p = a + b + c;
+  const O = [(a * A[0] + b * B[0] + c * C[0]) / p, (a * A[1] + b * B[1] + c * C[1]) / p];
+  const area = Math.abs((B[0] - A[0]) * (C[1] - A[1]) - (C[0] - A[0]) * (B[1] - A[1])) / 2;
+  return [O, 2 * area / p];
+}
+const clampTo = (p, h = 240) => [Math.min(345, Math.max(15, p[0])), Math.min(h - 15, Math.max(15, p[1]))];
+
+function triangleDemo(host) {
+  host.innerHTML = `<section class="sheet"><h2>Треугольник: потяни вершины</h2>
+    <p>Около любого треугольника можно описать окружность и в любой вписать. Центр описанной лежит на серединных перпендикулярах, центр вписанной на биссектрисах.</p>
+    <svg class="fig" viewBox="0 0 360 300" role="img" aria-label="Треугольник с двумя окружностями"></svg></section>`;
+  const svg = host.querySelector("svg"), pts = [[110, 215], [255, 215], [165, 105]];
+  function draw() {
+    const [A, B, C] = pts, out = circumcircle(A, B, C), inner = incircle(A, B, C);
+    svg.innerHTML = (out ? ring(out[0], out[1], "dash") : "") + ring(inner[0], inner[1], "new") + shape(pts) + grips(pts);
+  }
+  draggable(svg, pts, p => clampTo(p, 300), draw);
+  draw();
+}
+
+function quadDemo(host) {
+  host.innerHTML = `<section class="sheet"><h2>Четырёхугольник: потяни вершины</h2>
+    <p>Описать окружность можно, если суммы противоположных углов равны 180°. Вписать, если суммы противоположных сторон равны.</p>
+    <svg class="fig" viewBox="0 0 360 240" role="img" aria-label="Четырёхугольник"></svg><div class="reads"></div><p class="verdict"></p></section>`;
+  const svg = host.querySelector("svg"), reads = host.querySelector(".reads"), verdict = host.querySelector(".verdict");
+  const pts = [[85, 170], [260, 195], [290, 65], [110, 55]];
+  function convex() {
+    const turn = i => { const [a, b, c] = [pts[i], pts[(i + 1) % 4], pts[(i + 2) % 4]]; return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); };
+    const t = [0, 1, 2, 3].map(turn);
+    return t.every(v => v > 0) || t.every(v => v < 0);
+  }
+  function draw() {
+    const [A, B, C, D] = pts, ok = convex();
+    const out = circumcircle(A, B, C), names = "ABCD";
+    const labels = pts.map((p, i) => { const mid = [(A[0] + B[0] + C[0] + D[0]) / 4, (A[1] + B[1] + C[1] + D[1]) / 4]; return say(on(p, 18, dir(mid, p)), names[i]); }).join("");
+    svg.innerHTML = (out && out[1] < 400 ? ring(out[0], out[1], "dash") : "") + shape(pts) + grips(pts) + labels;
+    if (!ok) { reads.innerHTML = ""; verdict.textContent = "Фигура не выпуклая: верни вершины, чтобы углы были меньше 180°."; return; }
+    const ac = angle(A, B, D) + angle(C, B, D), bd = angle(B, A, C) + angle(D, A, C);
+    const unit = v => Math.round(v / 10), s1 = unit(dist(A, B)) + unit(dist(C, D)), s2 = unit(dist(B, C)) + unit(dist(D, A));
+    reads.innerHTML = read("∠A + ∠C", Math.round(ac) + "°") + read("∠B + ∠D", Math.round(bd) + "°") + read("AB + CD", s1) + read("BC + DA", s2);
+    const round = Math.abs(ac - 180) <= 2, tangent = s1 === s2;
+    verdict.textContent = (round ? "Окружность описать можно. " : "Описать окружность нельзя: пунктир не проходит через D. ") + (tangent ? "Вписать окружность можно." : "Вписать окружность нельзя.");
+  }
+  draggable(svg, pts, p => clampTo(p), draw);
+  draw();
+}
+
+const FIGURES = [
+  { text: "Квадрат", q: "out", yes: true, why: "Сумма противоположных углов 90° + 90° = 180°." },
+  { text: "Квадрат", q: "in", yes: true, why: "Все стороны равны, поэтому суммы противоположных сторон равны." },
+  { text: "Прямоугольник со сторонами 3 и 5", q: "out", yes: true, why: "Все углы прямые, сумма противоположных 180°." },
+  { text: "Прямоугольник со сторонами 3 и 5", q: "in", yes: false, why: "3 + 3 не равно 5 + 5." },
+  { text: "Ромб с углом 60°", q: "in", yes: true, why: "Все стороны равны, суммы противоположных сторон совпадают." },
+  { text: "Ромб с углом 60°", q: "out", yes: false, why: "Противоположные углы равны 60° и 60°, их сумма не 180°." },
+  { text: "Параллелограмм с углом 70° и сторонами 4 и 6", q: "out", yes: false, why: "Противоположные углы равны, их сумма 140°." },
+  { text: "Параллелограмм с углом 70° и сторонами 4 и 6", q: "in", yes: false, why: "4 + 4 не равно 6 + 6." },
+  { text: "Равнобедренная трапеция", q: "out", yes: true, why: "Углы при основании равны, а прилежащие к боковой стороне дают 180°, поэтому противоположные тоже дают 180°." },
+  { text: "Трапеция с основаниями 3 и 7 и боковыми сторонами 5 и 5", q: "in", yes: true, why: "3 + 7 = 5 + 5." },
+  { text: "Трапеция с основаниями 2 и 6 и боковыми сторонами 5 и 5", q: "in", yes: false, why: "2 + 6 не равно 5 + 5." },
+  { text: "Произвольный треугольник", q: "out", yes: true, why: "Около любого треугольника можно описать окружность." },
+  { text: "Произвольный треугольник", q: "in", yes: true, why: "В любой треугольник можно вписать окружность." },
+];
+function numericFigure() {
+  if (Math.random() < 0.5) {
+    const a = rand(60, 120, 5), b = rand(60, 120, 5), yes = Math.random() < 0.5, shift = yes ? 0 : pick([-10, 10]);
+    const angles = [a, b, 180 - a + shift, 180 - b - shift];
+    return { text: `Четырёхугольник с углами ${angles.join("°, ")}° (идут по порядку)`, q: "out", yes, why: `Сумма противоположных углов: ${angles[0]} + ${angles[2]} = ${angles[0] + angles[2]}.` };
+  }
+  const a = rand(3, 9), b = rand(3, 9), c = rand(3, 9), yes = Math.random() < 0.5, shift = yes ? 0 : pick([-1, 1]), d = Math.max(2, a + c - b) + (a + c - b < 2 ? 0 : shift);
+  return { text: `Выпуклый четырёхугольник со сторонами ${a}, ${b}, ${c}, ${d} (идут по порядку)`, q: "in", yes: a + c === b + d, why: `Суммы противоположных сторон: ${a} + ${c} = ${a + c} и ${b} + ${d} = ${b + d}.` };
+}
+function figureQuiz(host) {
+  let done = 0, right = 0;
+  function next() {
+    const item = Math.random() < 0.4 ? numericFigure() : pick(FIGURES);
+    host.innerHTML = `<section class="sheet"><h2>Можно или нельзя</h2><p><b>${item.text}</b></p><p>Можно ли ${item.q === "out" ? "описать около него окружность" : "вписать в него окружность"}?</p>
+      <div class="row"><button class="option" data-v="1">Да, можно</button><button class="option" data-v="0">Нет, нельзя</button></div>
+      <p class="why" hidden></p><button class="more" hidden>Дальше</button><p class="note">${done ? `Верно: ${right} из ${done}` : ""}</p></section>`;
+    const why = host.querySelector(".why"), more = host.querySelector(".more");
+    host.querySelectorAll(".option").forEach(b => { b.onclick = () => {
+      if (!more.hidden) return;
+      const ok = (b.dataset.v === "1") === item.yes;
+      done++; right += ok;
+      b.classList.add(ok ? "right" : "wrong");
+      why.hidden = more.hidden = false;
+      why.className = "why " + (ok ? "right" : "wrong");
+      why.textContent = `${ok ? "Верно." : `Неверно, ${item.yes ? "можно" : "нельзя"}.`} ${item.why}`;
+    }; });
+    more.onclick = next;
+  }
+  next();
+}
+
+// ---------- доказательства ----------
+const TRI = [[60, 200], [300, 200], [205, 70]];   // A, C, B: B сверху
+const PROOFS = [
+  { title: "Сумма углов треугольника", grade: 7, claim: "∠A + ∠B + ∠C = 180°",
+    idea: "Соберём все три угла в одну точку, и они составят развёрнутый угол.",
+    figure(step) {
+      const [A, C, B] = TRI, M = [B[0] - 150, B[1]], N = [B[0] + 140, B[1]];
+      return fig(shape(TRI) + (step >= 1 ? seg(M, N, "new") : "") + mark(A, C, B, "A") + mark(C, A, B, "C") + mark(B, A, C, "B", false, 20)
+        + (step >= 2 ? mark(B, M, A, "A", true, 22) + mark(B, N, C, "C", true, 22) : "") + say([B[0], B[1] - 14], ""));
+    },
+    steps: [
+      { ask: "С чего начать?", right: "Проведём через B прямую, параллельную AC", wrong: [["Проведём из B высоту на сторону AC", "Высота делит угол B, но не переносит к нему углы A и C."], ["Проведём биссектрису угла B треугольника", "Биссектриса тоже не связывает угол B с углами A и C."]], note: "Параллельная прямая даст равные углы при секущих AB и CB." },
+      { ask: "Что можно сказать про новые углы при вершине B?", right: "Они равны ∠A и ∠C как накрест лежащие", wrong: [["Они равны ∠A и ∠C как вертикальные", "Вертикальные углы получаются при пересечении двух прямых в одной точке."], ["Они равны ∠A и ∠C как смежные", "Смежные углы не равны, а дают в сумме 180°."]], note: "AB и CB это секущие при параллельных прямых." },
+      { ask: "Что образуют три угла при вершине B?", right: "Вместе они дают развёрнутый угол, 180°", wrong: [["Вместе они дают прямой угол, ровно 90°", "Эти углы лежат на прямой, а не образуют прямой угол."], ["Вместе они дают полный угол, ровно 360°", "Все три угла лежат по одну сторону прямой."]], note: "Углы заполняют всю сторону от прямой." },
+      { ask: "Какой вывод?", right: "∠A + ∠B + ∠C = 180°", wrong: [["∠A + ∠B + ∠C = 360°", "Это сумма углов четырёхугольника."], ["∠A + ∠B + ∠C = 90°", "Так сумма только острых углов прямоугольного треугольника."]], note: "Теорема доказана." },
+    ] },
+  { title: "Вписанный угол", grade: 8, claim: "Вписанный угол равен половине центрального на той же дуге",
+    idea: "Разберём случай, когда центр лежит на стороне угла. Остальные случаи сводятся к нему разбиением угла на два.",
+    figure(step) {
+      const O = CENTER, B = on(O, R, 180), C = on(O, R, 0), A = on(O, R, 65);
+      return fig(ring(O, R) + seg(B, C) + seg(B, A) + (step >= 1 ? seg(O, A, "new") : "") + mark(B, C, A, "x") + (step >= 2 ? mark(A, B, O, "x", true, 22) : "") + (step >= 3 ? mark(O, C, A, "", true, 20) : "")
+        + dot(O) + say([O[0], O[1] + 14], "O") + say([B[0] - 12, B[1]], "B") + say([C[0] + 12, C[1]], "C") + say(on(O, R + 14, 65), "A"));
+    },
+    steps: [
+      { ask: "С чего начать? Угол ABC, центр O лежит на стороне BC.", right: "Соединим O и A: тогда OA = OB как радиусы", wrong: [["Соединим A и C: тогда AC = OB как хорды", "Хорда AC не равна радиусу в общем случае."], ["Проведём OA: тогда OA = AB как радиусы", "AB это хорда, а не радиус."]], note: "Радиусы одной окружности равны." },
+      { ask: "Какой получился треугольник AOB?", right: "Равнобедренный, поэтому ∠OAB = ∠OBA", wrong: [["Равносторонний, поэтому ∠OAB = 60°", "Равны только две стороны, AB может быть любой."], ["Прямоугольный, поэтому ∠AOB = 90°", "Угол при O может быть любым."]], note: "В равнобедренном треугольнике углы при основании равны." },
+      { ask: "Чем является угол AOC для треугольника AOB?", right: "Внешним, он равен ∠OAB + ∠OBA", wrong: [["Смежным, он равен ∠OAB − ∠OBA", "Смежные углы дают в сумме 180°, такой формулы нет."], ["Вертикальным, он равен ∠OBA", "Вертикальный угол лежит напротив, а AOC рядом с AOB."]], note: "Внешний угол равен сумме двух углов, не смежных с ним." },
+      { ask: "Какой вывод?", right: "∠AOC = 2∠ABC, значит ∠ABC = ∠AOC / 2", wrong: [["∠AOC = ∠ABC, значит ∠ABC = ∠AOC", "В сумме два равных угла, поэтому центральный вдвое больше."], ["∠ABC = 2∠AOC, значит ∠AOC = ∠ABC / 2", "Больше центральный угол, а не вписанный."]], note: "Оба слагаемых равны углу ABC. Теорема доказана." },
+    ] },
+  { title: "Вписанный четырёхугольник", grade: 8, claim: "Сумма противоположных углов равна 180°",
+    idea: "Каждый угол это половина дуги. Две противоположные дуги составляют всю окружность.",
+    figure(step) {
+      const O = CENTER, A = on(O, R, 190), B = on(O, R, 290), C = on(O, R, 20), D = on(O, R, 110);
+      return fig(ring(O, R) + shape([A, B, C, D]) + mark(A, B, D, "") + mark(C, B, D, "") + say(on(O, R + 14, 190), "A") + say(on(O, R + 14, 290), "B") + say(on(O, R + 14, 20), "C") + say(on(O, R + 14, 110), "D") + (step >= 1 ? seg(B, D, "dash") : ""));
+    },
+    steps: [
+      { ask: "На какие дуги опираются углы A и C?", right: "∠A на дугу BCD, а ∠C на дугу BAD", wrong: [["∠A на дугу BAD, а ∠C на дугу BCD", "Вписанный угол опирается на дугу, которая не содержит его вершину."], ["∠A на дугу AB, а ∠C на дугу CD", "Стороны угла A идут в точки B и D, поэтому дуга от B до D."]], note: "Вписанный угол опирается на дугу напротив вершины." },
+      { ask: "Чему равна сумма этих дуг?", right: "Они вместе дают всю окружность, 360°", wrong: [["Они вместе дают половину круга, 180°", "Дуги BCD и BAD закрывают всю окружность, без остатка."], ["Они вместе дают четверть круга, 90°", "Дуги BCD и BAD закрывают всю окружность, без остатка."]], note: "Точки B и D делят окружность на две дуги." },
+      { ask: "Какой вывод?", right: "∠A + ∠C = 360° / 2 = 180°", wrong: [["∠A + ∠C = 360° · 2 = 720°", "Вписанный угол это половина дуги, а не две дуги."], ["∠A + ∠C = 360° − 90° = 270°", "Угол равен половине дуги, здесь надо делить на 2."]], note: "Для B и D рассуждение то же." },
+    ] },
+  { title: "Теорема Пифагора", grade: 8, claim: "a² + b² = c²",
+    idea: "Запишем площадь одного и того же квадрата двумя способами.",
+    figure(step) {
+      const s = 160, x = 100, y = 40, a = s * 0.375, P = [[x, y], [x + s, y], [x + s, y + s], [x, y + s]];
+      const Q = [[x + a, y], [x + s, y + a], [x + s - a, y + s], [x, y + s - a]];
+      return fig((step >= 1 ? shape(P) : shape(P, "thin")) + (step >= 2 ? shape(Q, "fill") : "") + (step >= 2 ? say([x + s / 2, y + s / 2], "c²") : "")
+        + say([x + a / 2, y - 12], "a") + say([x + a + (s - a) / 2, y - 12], "b") + (step >= 2 ? say([x + 18, y + 18], "ab/2") : ""));
+    },
+    steps: [
+      { ask: "С чего начать? Есть прямоугольный треугольник с катетами a, b и гипотенузой c.", right: "Построим квадрат со стороной a + b", wrong: [["Построим квадрат со стороной a − b", "Четыре треугольника в такой квадрат не поместятся."], ["Построим круг с диаметром a + b", "Площадь круга не даст связи между a, b и c."]], note: "Четыре таких треугольника укладываются по углам квадрата." },
+      { ask: "Чему равна его площадь?", right: "S = (a + b)²", wrong: [["S = a² + b²", "Сторона равна a + b, поэтому в квадрат возводится вся сумма."], ["S = 2(a + b)", "Это половина периметра, а не площадь."]], note: "Площадь квадрата это квадрат стороны." },
+      { ask: "Разобьём квадрат на части. Что получится?", right: "S = 4 · ab/2 + c²", wrong: [["S = 4 · ab + c²", "Площадь прямоугольного треугольника равна половине произведения катетов."], ["S = 2 · ab/2 + c²", "Треугольников четыре, по одному в каждом углу."]], note: "Четыре треугольника и внутренний квадрат со стороной c." },
+      { ask: "Приравняем два выражения.", right: "a² + 2ab + b² = 2ab + c²", wrong: [["a² + b² = 2ab + c²", "(a + b)² содержит ещё 2ab."], ["a² + ab + b² = 2ab + c²", "Удвоенное произведение равно 2ab, а не ab."]], note: "Раскрываем квадрат суммы." },
+      { ask: "Какой вывод?", right: "a² + b² = c²", wrong: [["a² − b² = c²", "2ab вычитается из обеих частей, знаки a² и b² не меняются."], ["a + b = c", "Сторона треугольника короче суммы двух других."]], note: "2ab сокращается. Теорема доказана." },
+    ] },
+  { title: "Площадь треугольника", grade: 8, claim: "S = a · h / 2",
+    idea: "Два одинаковых треугольника складываются в параллелограмм, а его площадь мы знаем.",
+    figure(step) {
+      const A = [60, 190], C = [230, 190], B = [130, 70], D = [300, 70], H = [130, 190];
+      return fig((step >= 1 ? shape([B, C, D], "fill") : "") + shape([A, C, B]) + seg(B, H, "dash") + square(H, B, C, 10) + say([145, 205], "a") + say([118, 135], "h"));
+    },
+    steps: [
+      { ask: "С чего начать?", right: "Достроим треугольник до параллелограмма", wrong: [["Разрежем треугольник на два одинаковых", "Произвольный треугольник так не разрезать."], ["Достроим треугольник до точного круга", "Формулы для параллелограмма у нас есть, а круг не поможет."]], note: "Копию треугольника приложим к стороне." },
+      { ask: "Чему равна площадь параллелограмма?", right: "S₁ = a · h", wrong: [["S₁ = a + h", "Площадь это произведение, а не сумма."], ["S₁ = a · h / 2", "Половина это как раз площадь треугольника, её ищем дальше."]], note: "Основание на высоту." },
+      { ask: "Какую часть составляет треугольник?", right: "S = S₁ / 2 = a · h / 2", wrong: [["S = S₁ · 2 = 2a · h", "Параллелограмм больше треугольника, а не меньше."], ["S = S₁ / 4 = a · h / 4", "Диагональ делит параллелограмм на две равные части."]], note: "Диагональ делит параллелограмм на два равных треугольника." },
+    ] },
+  { title: "Теорема синусов", grade: 9, claim: "a / sin A = 2R",
+    idea: "Построим прямоугольный треугольник с гипотенузой 2R, в котором есть угол, равный A.",
+    figure(step) {
+      const O = CENTER, B = on(O, R, 200), C = on(O, R, 330), A = on(O, R, 95), D = on(O, R, 20);
+      return fig(ring(O, R) + shape([A, B, C]) + (step >= 1 ? seg(B, D, "new") + seg(C, D, "new") : "") + (step >= 2 ? square(C, B, D, 10) : "") + mark(A, B, C, "") + (step >= 3 ? mark(D, B, C, "", true) : "")
+        + say(on(O, R + 14, 200), "B") + say(on(O, R + 14, 330), "C") + say(on(O, R + 14, 95), "A") + (step >= 1 ? say(on(O, R + 14, 20), "D") : ""));
+    },
+    steps: [
+      { ask: "С чего начать? Сторона a = BC, угол A напротив неё.", right: "Проведём диаметр BD и соединим C и D", wrong: [["Проведём высоту AH и соединим B и H", "Высота не связана с радиусом R."], ["Проведём биссектрису AL и соединим L и C", "Биссектриса не даёт отрезка длиной 2R."]], note: "Диаметр равен 2R, поэтому R появится в чертеже." },
+      { ask: "Какой угол BCD?", right: "∠BCD = 90°, он опирается на диаметр", wrong: [["∠BCD = 60°, он опирается на хорду", "Угол, опирающийся на диаметр, прямой."], ["∠BCD = 45°, он опирается на радиус", "Вписанные углы опираются на дуги, а этот на полуокружность."]], note: "Дуга BD это полуокружность." },
+      { ask: "Как связаны ∠D и ∠A?", right: "∠D = ∠A: оба опираются на дугу BC", wrong: [["∠D = 2∠A: один из них центральный", "Оба угла вписанные."], ["∠D = 180° − ∠A: они смежные", "Вершины A и D лежат по одну сторону хорды BC."]], note: "Вписанные углы на одной дуге равны." },
+      { ask: "Запишем синус в прямоугольном треугольнике BCD.", right: "a = BD · sin D = 2R · sin A", wrong: [["a = BD · cos D = 2R · cos A", "a лежит напротив угла D, поэтому нужен синус."], ["a = BD / sin D = 2R / sin A", "Катет это гипотенуза, умноженная на синус."]], note: "Катет напротив угла равен гипотенузе на синус." },
+      { ask: "Какой вывод?", right: "a / sin A = 2R", wrong: [["a · sin A = 2R", "Выражаем делением, а не умножением."], ["a / sin A = R", "Диаметр равен 2R."]], note: "Для других сторон рассуждение то же. Теорема доказана." },
+    ] },
+  { title: "Вертикальные углы", grade: 7, claim: "Вертикальные углы равны",
+    idea: "Оба угла дополняют один и тот же угол до 180°.",
+    figure(step) {
+      const O = [180, 120], ray = d => on(O, 130, d);
+      return fig(seg(ray(0), ray(180)) + seg(ray(40), ray(220)) + mark(O, ray(0), ray(40), "1", step >= 3) + mark(O, ray(40), ray(180), "2", step >= 1 && step < 3, 22) + mark(O, ray(180), ray(220), "3", step >= 3) + dot(O));
+    },
+    steps: [
+      { ask: "Как связаны углы 1 и 2?", right: "Они смежные: ∠1 + ∠2 = 180°", wrong: [["Они вертикальные: ∠1 = ∠2", "У них общая сторона, а вертикальные углы её не имеют."], ["Они накрест лежащие: ∠1 = ∠2", "Накрест лежащие углы бывают при двух прямых и секущей."]], note: "Две другие стороны образуют прямую." },
+      { ask: "Как связаны углы 2 и 3?", right: "Они смежные: ∠2 + ∠3 = 180°", wrong: [["Они равные: ∠2 = ∠3 всегда", "Угол 2 может быть тупым, а угол 3 острым."], ["Они прямые: ∠2 + ∠3 = 90°", "Вместе они образуют развёрнутый угол."]], note: "Угол 2 смежный и с углом 3." },
+      { ask: "Какой вывод?", right: "∠1 = 180° − ∠2 = ∠3", wrong: [["∠1 = 180° + ∠2 = ∠3", "Из суммы выражаем вычитанием."], ["∠1 = 90° − ∠2 = ∠3", "Сумма смежных углов 180°, а не 90°."]], note: "Оба угла равны 180° − ∠2. Теорема доказана." },
+    ] },
+  { title: "Углы равнобедренного треугольника", grade: 7, claim: "Углы при основании равны",
+    idea: "Разрежем треугольник биссектрисой на две равные половины.",
+    figure(step) {
+      const A = [70, 200], C = [290, 200], B = [180, 50], D = [180, 200];
+      return fig(shape([A, C, B]) + (step >= 1 ? seg(B, D, "new") + say([180, 215], "D") : "") + mark(A, C, B, "", step >= 3) + mark(C, A, B, "", step >= 3) + say([56, 208], "A") + say([304, 208], "C") + say([180, 36], "B"));
+    },
+    steps: [
+      { ask: "Дано AB = BC. С чего начать?", right: "Проведём биссектрису BD угла B", wrong: [["Проведём через B прямую, параллельную AC", "Параллельная прямая не даёт равных половин треугольника."], ["Отметим на AC случайную точку D", "У такой точки нет полезных свойств."]], note: "Биссектриса делит угол B пополам." },
+      { ask: "Сравним треугольники ABD и CBD.", right: "Равны: AB = CB, BD общая, углы при B равны", wrong: [["Равны: AB = CB, BD общая, углы при D равны", "Равенство углов при D мы ещё не знаем."], ["Равны: все три угла у них одинаковы", "По трём углам треугольники подобны, но не обязательно равны."]], note: "Первый признак: две стороны и угол между ними." },
+      { ask: "Какой вывод?", right: "∠A = ∠C как соответственные углы", wrong: [["∠A = ∠C как вертикальные углы", "Эти углы не образованы двумя пересекающимися прямыми."], ["∠A + ∠C = 90° как острые углы", "Треугольник не обязательно прямоугольный."]], note: "В равных треугольниках соответственные углы равны. Теорема доказана." },
+    ] },
+  { title: "Внешний угол треугольника", grade: 7, claim: "Внешний угол равен сумме двух углов, не смежных с ним",
+    idea: "Сравним две записи: сумму углов треугольника и сумму смежных углов.",
+    figure(step) {
+      const A = [50, 195], C = [240, 195], B = [170, 70], D = [340, 195];
+      return fig(shape([A, C, B]) + seg(C, D) + mark(A, C, B, "A") + mark(B, A, C, "B", false, 18) + mark(C, A, B, "C", false, 22) + mark(C, D, B, "x", true, 30));
+    },
+    steps: [
+      { ask: "Что известно про углы треугольника?", right: "∠A + ∠B + ∠C = 180°", wrong: [["∠A + ∠B + ∠C = 360°", "Это сумма углов четырёхугольника."], ["∠A + ∠B − ∠C = 180°", "В сумме углов все слагаемые с плюсом."]], note: "Теорема о сумме углов." },
+      { ask: "Как связаны угол C и внешний угол x?", right: "Они смежные: ∠C + x = 180°", wrong: [["Они вертикальные: ∠C = x", "Они лежат по одну сторону прямой и имеют общую сторону."], ["Они равные: ∠C + x = 90°", "Эти углы образуют развёрнутый угол."]], note: "Лучи CA и CD образуют прямую." },
+      { ask: "Сравним две записи.", right: "x = ∠A + ∠B", wrong: [["x = ∠A + ∠C", "Угол C с внешним смежный, он не входит в сумму."], ["x = ∠A − ∠B", "После сокращения ∠C слагаемые сохраняют знак плюс."]], note: "В обеих суммах 180° и ∠C, поэтому остальное равно. Теорема доказана." },
+    ] },
+  { title: "Средняя линия треугольника", grade: 8, claim: "MN параллельна AC и равна её половине",
+    idea: "Средняя линия отсекает маленький треугольник, подобный большому.",
+    figure(step) {
+      const A = [50, 200], C = [310, 200], B = [200, 50], M = [125, 125], N = [255, 125];
+      return fig(shape([A, C, B]) + seg(M, N, "new") + mark(B, A, C, "", step >= 1, 20) + dot(M) + dot(N) + say([36, 208], "A") + say([324, 208], "C") + say([200, 36], "B") + say([110, 118], "M") + say([272, 118], "N"));
+    },
+    steps: [
+      { ask: "M и N это середины AB и BC. Какие треугольники сравним?", right: "Сравним MBN и ABC: угол B у них общий", wrong: [["Сравним MBN и AMN: угол M у них общий", "У этих треугольников нет равных углов и сторон в нужном отношении."], ["Сравним ABN и CBM: сторона BN у них общая", "BN это сторона только первого из них."]], note: "Маленький треугольник лежит внутри большого." },
+      { ask: "Какое отношение сторон?", right: "BM/BA = BN/BC = 1/2", wrong: [["BM/BA = BN/BC = 2", "BM меньше BA, отношение меньше единицы."], ["BM/BA = BN/BC = 1/4", "M это середина, поэтому BM ровно половина BA."]], note: "M и N это середины сторон." },
+      { ask: "Что следует про треугольники?", right: "Они подобны с коэффициентом 1/2", wrong: [["Они равны с коэффициентом 1", "Стороны одного вдвое меньше сторон другого."], ["Они подобны с коэффициентом 4", "Коэффициент равен отношению сторон, то есть 1/2."]], note: "Две пары пропорциональных сторон и равный угол между ними." },
+      { ask: "Что получаем для MN?", right: "MN = AC/2 и ∠BMN = ∠BAC", wrong: [["MN = 2AC и ∠BMN = ∠BAC", "MN меньше AC, а не больше."], ["MN = AC/2 и ∠BMN = ∠BCA", "Вершине M соответствует вершина A."]], note: "Так следует из подобия." },
+      { ask: "Какой вывод про параллельность?", right: "Соответственные углы равны, значит MN ∥ AC", wrong: [["Смежные углы равны, значит MN ∥ AC", "Признак параллельности использует соответственные углы."], ["Соответственные углы равны, значит MN ⟂ AC", "Равные соответственные углы дают параллельность."]], note: "AB это секущая. Теорема доказана." },
+    ] },
+  { title: "Касательная и радиус", grade: 8, claim: "Касательная перпендикулярна радиусу в точку касания",
+    idea: "Докажем от противного: допустим, что угол не прямой, и придём к противоречию.",
+    figure(step) {
+      const O = [180, 95], A = on(O, 70, 250), u = [Math.cos(rad(18)), -Math.sin(rad(18))], along = t => [A[0] + u[0] * t, A[1] + u[1] * t];
+      const t = (O[0] - A[0]) * u[0] + (O[1] - A[1]) * u[1], H = along(t);
+      return fig(ring(O, 70) + seg(along(-110), along(190)) + seg(O, A) + (step >= 1 ? seg(O, H, "new") + say([H[0] + 12, H[1] + 12], "H") : "") + dot(O) + say([O[0], O[1] - 14], "O") + say([A[0] - 6, A[1] + 16], "A"));
+    },
+    steps: [
+      { ask: "С чего начать доказательство от противного?", right: "Допустим, что OA не перпендикулярен прямой", wrong: [["Допустим, что точка O лежит на этой прямой", "Такое предположение не отрицает утверждение теоремы."], ["Допустим, что OA равен диаметру окружности", "OA это радиус по условию."]], note: "Предполагаем обратное тому, что доказываем." },
+      { ask: "Что тогда можно построить?", right: "Перпендикуляр OH, он короче наклонной OA", wrong: [["Перпендикуляр OH, он длиннее наклонной OA", "Перпендикуляр короче любой наклонной из той же точки."], ["Перпендикуляр OH, он равен наклонной OA", "Они равны, только если совпадают."]], note: "Перпендикуляр это кратчайшее расстояние до прямой." },
+      { ask: "Где лежит точка H?", right: "OH < R, значит H внутри окружности", wrong: [["OH > R, значит H вне окружности", "OH короче радиуса OA."], ["OH = R, значит H на окружности", "OH короче радиуса OA."]], note: "OA равно радиусу R." },
+      { ask: "Что это значит для прямой?", right: "Прямая пересекает окружность в двух точках", wrong: [["Прямая совсем не имеет с окружностью точек", "Точка H этой прямой лежит внутри окружности."], ["Прямая проходит точно через центр окружности", "Расстояние OH больше нуля."]], note: "Прямая с точкой внутри круга пересекает окружность дважды." },
+      { ask: "Какой вывод?", right: "Это противоречие, значит OA перпендикулярен", wrong: [["Это верно, значит OA не перпендикулярен", "У касательной ровно одна общая точка, поэтому верным быть не может."], ["Это противоречие, значит прямой не бывает", "Неверным оказалось предположение, а не существование прямой."]], note: "У касательной одна общая точка с окружностью. Теорема доказана." },
+    ] },
+  { title: "Отрезки касательных", grade: 8, claim: "PA = PB",
+    idea: "Соединим центр с точками, и получим два равных прямоугольных треугольника.",
+    figure(step) {
+      const O = [115, 120], r = 70, t = 55, A = on(O, r, t), B = on(O, r, -t), P = [O[0] + r / Math.cos(rad(t)), O[1]];
+      return fig(ring(O, r) + seg(P, A) + seg(P, B) + (step >= 1 ? seg(O, A, "new") + seg(O, B, "new") + seg(O, P, "new") : "") + (step >= 2 ? square(A, O, P) + square(B, O, P) : "") + dot(O) + say([O[0] - 12, O[1]], "O") + say([P[0] + 12, P[1]], "P") + say(on(O, r + 14, t), "A") + say(on(O, r + 14, -t), "B"));
+    },
+    steps: [
+      { ask: "С чего начать?", right: "Соединим центр O с точками A, B и P", wrong: [["Соединим A и B и забудем про точку O", "Без центра нельзя использовать свойство касательной."], ["Проведём через P вторую секущую линию", "Новая секущая здесь ни с чем не связана."]], note: "Радиусы в точки касания дают прямые углы." },
+      { ask: "Какие углы при A и B?", right: "∠OAP = ∠OBP = 90°", wrong: [["∠OAP = ∠OBP = 45°", "Радиус в точку касания перпендикулярен касательной."], ["∠OAP = ∠OBP = 60°", "Радиус в точку касания перпендикулярен касательной."]], note: "По теореме о касательной и радиусе." },
+      { ask: "Сравним треугольники OAP и OBP.", right: "Равны: OP общая, OA = OB", wrong: [["Равны: OP общая, AP = OB", "AP это касательная, а OB радиус."], ["Подобны: OP общая, AB = OB", "Здесь есть точное равенство по гипотенузе и катету."]], note: "Признак по гипотенузе и катету." },
+      { ask: "Какой вывод?", right: "PA = PB", wrong: [["PA = PO", "В прямоугольном треугольнике гипотенуза PO длиннее катета."], ["PA = OA", "Касательная не равна радиусу в общем случае."]], note: "Соответственные стороны равных треугольников равны." },
+    ] },
+  { title: "Высота из прямого угла", grade: 8, claim: "CH² = AH · HB",
+    idea: "Высота делит прямоугольный треугольник на два подобных.",
+    figure(step) {
+      const M = [180, 190], A = on(M, 140, 180), B = on(M, 140, 0), C = on(M, 140, 120), H = [C[0], 190];
+      return fig(shape([A, B, C]) + seg(C, H, "new") + square(C, A, B) + square(H, C, B, 10) + (step >= 1 ? mark(C, A, H, "", true, 30) + mark(B, A, C, "", true) : "") + say([A[0] - 12, 198], "A") + say([B[0] + 12, 198], "B") + say([C[0], C[1] - 14], "C") + say([H[0], 205], "H"));
+    },
+    steps: [
+      { ask: "∠C = 90°, CH это высота. Как связаны ∠ACH и ∠B?", right: "∠ACH = ∠B: оба дополняют ∠A до 90°", wrong: [["∠ACH = ∠A: оба дополняют ∠B до 90°", "∠ACH и ∠A лежат в одном прямоугольном треугольнике, их сумма 90°."], ["∠ACH = ∠B: оба дополняют ∠A до 180°", "В прямоугольном треугольнике острые углы дополняют до 90°."]], note: "В треугольниках ACH и ABC острые углы в сумме дают 90°." },
+      { ask: "Что с треугольниками ACH и CBH?", right: "Подобны: прямой угол и ∠ACH = ∠B", wrong: [["Равны: прямой угол и ∠ACH = ∠B", "Двух равных углов хватает для подобия, но не для равенства."], ["Подобны: общая сторона CH и ∠A = ∠B", "Углы A и B в общем случае не равны."]], note: "Признак подобия по двум углам." },
+      { ask: "Запишем отношение сторон.", right: "AH / CH = CH / HB", wrong: [["AH / CH = HB / CH", "Вершине A соответствует C, поэтому отношение перевёрнуто."], ["AH / HB = CH / CH", "Сравниваем соответственные стороны, а не стороны одного отрезка."]], note: "Катеты подобных треугольников пропорциональны." },
+      { ask: "Какой вывод?", right: "CH² = AH · HB", wrong: [["CH² = AH + HB", "Из пропорции получается произведение, а не сумма."], ["CH = AH · HB", "В пропорции CH встречается дважды."]], note: "Произведение крайних равно произведению средних. Теорема доказана." },
+    ] },
+  { title: "Теорема косинусов", grade: 9, claim: "a² = b² + c² − 2bc · cos A",
+    idea: "Высота делит треугольник на два прямоугольных, в них работает теорема Пифагора. Разберём случай острого угла A.",
+    figure(step) {
+      const A = [50, 195], C = [310, 195], B = [140, 60], H = [140, 195];
+      return fig(shape([A, C, B]) + (step >= 1 ? seg(B, H, "new") + square(H, A, B, 10) + say([140, 210], "H") : "") + mark(A, C, B, "") + say([36, 203], "A") + say([324, 203], "C") + say([140, 46], "B") + say([82, 120], "c") + say([232, 120], "a") + say([230, 210], "b"));
+    },
+    steps: [
+      { ask: "С чего начать?", right: "Проведём высоту BH на сторону AC", wrong: [["Проведём биссектрису BH на сторону AC", "В биссектрисе нет прямого угла для теоремы Пифагора."], ["Проведём медиану BH на сторону AC", "Медиана тоже не даёт прямого угла."]], note: "Появляются два прямоугольных треугольника." },
+      { ask: "Выразим отрезки из треугольника ABH.", right: "AH = c · cos A, BH = c · sin A", wrong: [["AH = c · sin A, BH = c · cos A", "AH прилежит к углу A, поэтому косинус."], ["AH = c / cos A, BH = c / sin A", "Катет это гипотенуза, умноженная на косинус или синус."]], note: "c это гипотенуза треугольника ABH." },
+      { ask: "Запишем Пифагора для треугольника BHC.", right: "a² = c²sin²A + (b − c cos A)²", wrong: [["a² = c²sin²A + (b + c cos A)²", "HC = AC − AH, здесь разность."], ["a = c sin A + (b − c cos A)", "Складываются квадраты катетов, а не сами катеты."]], note: "HC = b − AH = b − c · cos A." },
+      { ask: "Раскроем скобку и сгруппируем.", right: "a² = c²(sin²A + cos²A) + b² − 2bc cos A", wrong: [["a² = c²(sin²A − cos²A) + b² − 2bc cos A", "При раскрытии квадрата c²cos²A идёт с плюсом."], ["a² = c²(sin²A + cos²A) + b² + 2bc cos A", "Квадрат разности даёт минус перед удвоенным произведением."]], note: "(b − c cos A)² = b² − 2bc cos A + c²cos²A." },
+      { ask: "Какой вывод?", right: "a² = b² + c² − 2bc · cos A", wrong: [["a² = b² + c² + 2bc · cos A", "Минус сохраняется."], ["a² = b² − c² − 2bc · cos A", "sin²A + cos²A = 1, поэтому c² с плюсом."]], note: "sin²A + cos²A = 1. Теорема доказана." },
+    ] },
+].sort((a, b) => a.grade - b.grade);
+
+function proofsList(host) {
+  const list = PROOFS.filter(p => p.grade <= LIMIT);
+  host.innerHTML = `<section class="sheet"><h2>Доказательства с рисунком</h2><p>Выбирай следующий шаг. Рисунок будет меняться, а при ошибке страница объяснит почему.</p><div class="block">${list.map((p, i) => `<button class="card" data-i="${i}">${p.title}<br><span class="note">${p.claim}</span></button>`).join("")}</div></section>`;
+  host.querySelectorAll(".card").forEach(b => { b.onclick = () => proofView(host, list[b.dataset.i]); });
+}
+function proofView(host, proof) {
+  let step = 0;
+  function show() {
+    const stage = proof.steps[step], done = proof.steps.slice(0, step).map(s => `<li>${s.right}</li>`).join("");
+    if (!stage) {
+      host.innerHTML = `<section class="sheet"><h2>${proof.title}: доказано</h2>${proof.figure(99)}<ol class="chain">${done}</ol><p><b>Итог:</b> ${proof.claim}</p><button class="again">Собрать ещё раз</button><button class="back">Другие доказательства</button></section>`;
+      host.querySelector(".again").onclick = () => proofView(host, proof);
+      host.querySelector(".back").onclick = () => proofsList(host);
+      return;
+    }
+    const options = shuffle([stage.right, ...stage.wrong.map(w => w[0])]);
+    host.innerHTML = `<section class="sheet"><h2>${proof.title}, шаг ${step + 1} из ${proof.steps.length}</h2>
+      <p><b>Докажем:</b> ${proof.claim}</p>${step ? "" : `<p class="note">${proof.idea}</p>`}${proof.figure(step)}${done ? `<ol class="chain">${done}</ol>` : ""}
+      <p><b>${stage.ask}</b></p><div class="block">${options.map((o, i) => `<button class="option" data-i="${i}">${o}</button>`).join("")}</div>
+      <p class="why" hidden></p><button class="main next" hidden>Дальше</button></section>`;
+    const why = host.querySelector(".why"), next = host.querySelector(".next");
+    host.querySelectorAll(".option").forEach(b => { b.onclick = () => {
+      const text = options[b.dataset.i], ok = text === stage.right;
+      b.classList.add(ok ? "right" : "wrong");
+      why.hidden = false;
+      why.className = "why " + (ok ? "right" : "wrong");
+      why.textContent = ok ? stage.note : stage.wrong.find(w => w[0] === text)[1];
+      if (ok) next.hidden = false;
+    }; });
+    next.onclick = () => { step++; show(); };
+  }
+  show();
+}
+
+// ---------- вкладки ----------
+const TABS = [
+  { id: "angles", title: "Углы", grade: 7, open(host) { host.innerHTML = `<div id="t"></div>`; trainer("angles", host.querySelector("#t")); } },
+  { id: "circle", title: "Окружность", grade: 7, open(host) {
+    host.innerHTML = `<div id="d"></div><div id="t"></div>`;
+    if (LIMIT >= 8) circleDemo(host.querySelector("#d"));
+    trainer("circle", host.querySelector("#t"));
+  } },
+  { id: "around", title: "Вписанная и описанная", grade: 8, open(host) {
+    host.innerHTML = `<div id="a"></div><div id="b"></div><div id="c"></div>`;
+    triangleDemo(host.querySelector("#a")); quadDemo(host.querySelector("#b")); figureQuiz(host.querySelector("#c"));
+  } },
+  { id: "proofs", title: "Доказательства", grade: 7, open: proofsList },
+].filter(t => t.grade <= LIMIT);
+
+const nav = document.getElementById("tabs");
+function openTab(tab) {
+  nav.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", b.dataset.id === tab.id));
+  view.innerHTML = "";
+  tab.open(view);
+}
+nav.innerHTML = TABS.map(t => `<button data-id="${t.id}">${t.title}</button>`).join("");
+nav.querySelectorAll("button").forEach((b, i) => { b.onclick = () => openTab(TABS[i]); });
+openTab(TABS[0]);
+</script>
+</body>
+</html>
