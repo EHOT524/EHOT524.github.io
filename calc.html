@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="description" content="Калькулятор для задач по физике: степени, корни, синус и запись через 10 в степени.">
+<title>Калькулятор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и геометрии. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --key: #eef3f8; --fn: #e2eaf3; --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --key: #1c2b3a; --fn: #233446; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --key: #1c2b3a; --fn: #233446; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.4 var(--body);
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.wrap { max-width: 440px; min-height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;
+  padding: 12px max(12px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px)); }
+.screen { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.history { font: 400 13px/1.4 var(--mono); color: var(--muted); min-height: 18px; text-align: right; overflow-wrap: anywhere; }
+.expr { font: 500 20px/1.3 var(--mono); text-align: right; overflow-wrap: anywhere; min-height: 26px; -webkit-user-select: text; user-select: text; }
+.result { font: 600 30px/1.2 var(--mono); text-align: right; overflow-wrap: anywhere; min-height: 36px; -webkit-user-select: text; user-select: text; }
+.result.error { color: var(--hit); font-size: 16px; font-family: var(--body); font-weight: 500; }
+.bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; color: var(--muted); font-size: 13px; }
+.copy { font: 500 13px var(--body); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; flex: 1; align-content: end; }
+.keys button { font: 500 19px var(--body); color: var(--ink); background: var(--key); border: 0; border-radius: 8px; min-height: 52px; padding: 0; cursor: pointer; }
+.keys button:active { filter: brightness(0.9); }
+.keys .fn { background: var(--fn); font-size: 16px; }
+.keys .op { background: var(--fn); font-size: 22px; }
+.keys .clear { color: var(--hit); }
+.keys .eq { background: var(--accent); color: var(--accent-ink); grid-column: span 2; font-size: 24px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+sup { font-size: 0.7em; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="screen" aria-live="polite">
+    <div class="history" id="history"></div>
+    <div class="expr" id="expr"></div>
+    <div class="result" id="result">0</div>
+  </section>
+  <div class="bar">
+    <span>Углы в градусах. Ответ впиши в бота.</span>
+    <button class="copy" id="copy" type="button">Скопировать</button>
+  </div>
+  <section class="keys" aria-label="Клавиши калькулятора">
+    <button class="fn" data-in="sin(">sin</button>
+    <button class="fn" data-in="cos(">cos</button>
+    <button class="fn" data-in="tg(">tg</button>
+    <button class="fn" data-in="(">(</button>
+    <button class="fn" data-in=")">)</button>
+
+    <button class="fn" data-in="^2" aria-label="в квадрат">x<sup>2</sup></button>
+    <button class="fn" data-in="^" aria-label="в степень">x<sup>y</sup></button>
+    <button class="fn" data-in="√(">√</button>
+    <button class="fn" data-in="π">π</button>
+    <button class="fn" data-in="·10^" aria-label="умножить на 10 в степени">·10<sup>x</sup></button>
+
+    <button data-in="7">7</button>
+    <button data-in="8">8</button>
+    <button data-in="9">9</button>
+    <button class="fn" data-act="back" aria-label="Стереть">⌫</button>
+    <button class="fn clear" data-act="clear" aria-label="Очистить">C</button>
+
+    <button data-in="4">4</button>
+    <button data-in="5">5</button>
+    <button data-in="6">6</button>
+    <button class="op" data-in="×">×</button>
+    <button class="op" data-in="÷">÷</button>
+
+    <button data-in="1">1</button>
+    <button data-in="2">2</button>
+    <button data-in="3">3</button>
+    <button class="op" data-in="+">+</button>
+    <button class="op" data-in="−">−</button>
+
+    <button data-in="0">0</button>
+    <button data-in=",">,</button>
+    <button class="fn" data-in="Ans" aria-label="Прошлый ответ">Ans</button>
+    <button class="eq" data-act="eq">=</button>
+  </section>
+</main>
+<script>
+// В Telegram вертикальный жест сворачивает страницу, а здесь часто жмут по клавишам подряд
+try { window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior", JSON.stringify({ allow_vertical_swipe: false })); } catch {}
+
+const exprEl = document.getElementById("expr");
+const resultEl = document.getElementById("result");
+const historyEl = document.getElementById("history");
+let expr = "", ans = 0, shown = "0", justDone = false;
+
+/* Разбор без eval: числа с запятой или точкой, + − × ÷ ^, скобки, sin cos tg √, π, Ans.
+   Умножение можно не писать: 2π, 3(4+1), 2√(9). */
+function tokenize(s) {
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === " ") { i++; continue; }
+    const num = /^\d+(?:[.,]\d*)?|^[.,]\d+/.exec(s.slice(i));
+    if (num) { out.push({ t: "num", v: parseFloat(num[0].replace(",", ".")) }); i += num[0].length; continue; }
+    const word = /^(sin|cos|tg|Ans)/.exec(s.slice(i));
+    if (word) { out.push(word[1] === "Ans" ? { t: "num", v: ans } : { t: "fn", v: word[1] }); i += word[1].length; continue; }
+    if (c === "√") { out.push({ t: "fn", v: "√" }); i++; continue; }
+    if (c === "π") { out.push({ t: "num", v: Math.PI }); i++; continue; }
+    if ("+-−×*÷/^·()".includes(c)) { out.push({ t: c === "(" || c === ")" ? c : "op", v: { "-": "−", "*": "×", "·": "×", "/": "÷" }[c] || c }); i++; continue; }
+    throw new Error("Непонятный знак: " + c);
+  }
+  // неявное умножение
+  const full = [];
+  for (const tok of out) {
+    const prev = full[full.length - 1];
+    const ends = prev && (prev.t === "num" || prev.t === ")");
+    const starts = tok.t === "num" || tok.t === "(" || tok.t === "fn";
+    if (ends && starts) full.push({ t: "op", v: "×" });
+    full.push(tok);
+  }
+  return full;
+}
+
+function evaluate(s) {
+  const toks = tokenize(s);
+  let pos = 0;
+  const peek = () => toks[pos];
+  const take = () => toks[pos++];
+  function expression() {
+    let v = term();
+    while (peek() && peek().t === "op" && (peek().v === "+" || peek().v === "−")) {
+      const op = take().v, r = term();
+      v = op === "+" ? v + r : v - r;
+    }
+    return v;
+  }
+  function term() {
+    let v = unary();
+    while (peek() && peek().t === "op" && (peek().v === "×" || peek().v === "÷")) {
+      const op = take().v, r = unary();
+      if (op === "÷" && r === 0) throw new Error("На ноль делить нельзя");
+      v = op === "×" ? v * r : v / r;
+    }
+    return v;
+  }
+  function unary() {
+    if (peek() && peek().t === "op" && (peek().v === "−" || peek().v === "+")) {
+      const op = take().v, v = unary();
+      return op === "−" ? -v : v;
+    }
+    return power();
+  }
+  function power() {
+    const base = atom();
+    if (peek() && peek().t === "op" && peek().v === "^") { take(); return Math.pow(base, unary()); }  // 2^3^2 = 2^(3^2)
+    return base;
+  }
+  function atom() {
+    const tok = take();
+    if (!tok) throw new Error("Выражение не закончено");
+    if (tok.t === "num") return tok.v;
+    if (tok.t === "(") {
+      const v = expression();
+      if (peek() && peek().t === ")") take();  // незакрытую скобку закрываем сами, как обычный калькулятор
+      return v;
+    }
+    if (tok.t === "fn") {
+      const arg = tok.v === "√" && !(peek() && peek().t === "(") ? power() : atom();
+      if (tok.v === "√") { if (arg < 0) throw new Error("Корень из отрицательного числа"); return Math.sqrt(arg); }
+      const r = arg * Math.PI / 180;
+      if (tok.v === "sin") return Math.sin(r);
+      if (tok.v === "cos") return Math.cos(r);
+      if (Math.abs(Math.cos(r)) < 1e-12) throw new Error("Тангенс 90° не существует");
+      return Math.tan(r);
+    }
+    throw new Error("Лишний знак");
+  }
+  const v = expression();
+  if (pos < toks.length) throw new Error(toks[pos].t === ")" ? "Лишняя скобка" : "Проверь выражение");
+  if (!isFinite(v)) throw new Error("Слишком большое число");
+  return v;
+}
+
+const SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+
+/* Число как в задачнике: 0,0125 или 1,6·10⁻¹⁴. 10 значащих цифр, лишние нули убираем. */
+function format(v) {
+  return formatAbs(v).replace(/^-/, "−");
+}
+
+function formatAbs(v) {
+  if (Object.is(v, -0) || Math.abs(v) < 1e-300) return "0";
+  const a = Math.abs(v);
+  if (a >= 1e-4 && a < 1e10) {
+    return String(parseFloat(v.toPrecision(10))).replace(".", ",");
+  }
+  const [m, e] = v.toExponential(9).split("e");
+  const mant = String(parseFloat(m)).replace(".", ",");
+  return `${mant}·10${String(parseInt(e, 10)).split("").map(ch => SUP[ch]).join("")}`;
+}
+
+// Для копирования в бота: бот понимает и 1,6*10^-14
+function plain(v) {
+  return format(v).replace(/·10([⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)/, (_, p) => "*10^" + p.split("").map(ch => Object.keys(SUP).find(k => SUP[k] === ch)).join(""));
+}
+
+function preview() {
+  if (!expr) { resultEl.textContent = shown; resultEl.classList.remove("error"); return; }
+  try {
+    resultEl.textContent = format(evaluate(expr));
+    resultEl.classList.remove("error");
+  } catch { /* пока выражение не дописано, оставляем прошлый результат */ }
+}
+
+function render() {
+  exprEl.textContent = expr.replace(/\^2(?![\d,])/g, "²");
+  preview();
+}
+
+function input(piece) {
+  if (justDone) {
+    // после «=» число начинает новое выражение, знак продолжает прошлый ответ
+    expr = /^[+−×÷^·]/.test(piece) ? "Ans" : "";
+    justDone = false;
+  }
+  if (piece === "·10^" && (!expr || /[+−×÷^(]$/.test(expr))) piece = "10^";  // нажали «×», потом «·10ˣ»: лишнее умножение не нужно
+  expr += piece;
+  render();
+}
+
+function equals() {
+  if (!expr) return;
+  try {
+    const v = evaluate(expr);
+    historyEl.textContent = exprEl.textContent + " =";
+    ans = v;
+    shown = format(v);
+    expr = "";
+    justDone = true;
+    resultEl.textContent = shown;
+    resultEl.classList.remove("error");
+    exprEl.textContent = "";
+  } catch (e) {
+    resultEl.textContent = e.message;
+    resultEl.classList.add("error");
+  }
+}
+
+document.querySelector(".keys").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.in !== undefined) return input(b.dataset.in);
+  if (b.dataset.act === "eq") return equals();
+  if (b.dataset.act === "clear") { expr = ""; shown = "0"; justDone = false; historyEl.textContent = ""; return render(); }
+  if (b.dataset.act === "back") {
+    justDone = false;
+    expr = expr.replace(/(sin\(|cos\(|tg\(|√\(|Ans|·10\^|.)$/, "");
+    return render();
+  }
+});
+
+// С компьютера можно печатать
+document.addEventListener("keydown", e => {
+  const map = { "*": "×", "/": "÷", "-": "−", ".": ",", "p": "π" };
+  if (/^[0-9+()^,]$/.test(e.key) || map[e.key]) { e.preventDefault(); input(map[e.key] || e.key); }
+  else if (e.key === "Enter" || e.key === "=") { e.preventDefault(); equals(); }
+  else if (e.key === "Backspace") { e.preventDefault(); document.querySelector('[data-act="back"]').click(); }
+  else if (e.key === "Escape") { document.querySelector('[data-act="clear"]').click(); }
+});
+
+document.getElementById("copy").addEventListener("click", async () => {
+  const text = justDone || !expr ? plain(ans) : resultEl.textContent;
+  const btn = document.getElementById("copy");
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Скопировано"; }
+  catch { btn.textContent = text; }  // если буфер недоступен, число видно на кнопке
+  setTimeout(() => { btn.textContent = "Скопировать"; }, 1500);
+});
+
+window.calc = { evaluate, format, plain };  // для проверки из консоли
+render();
+</script>
+</body>
+</html>
