@@ -102,6 +102,8 @@ svg.model { width: 100%; height: auto; max-height: 40vh; display: block; backgro
 </div>
 <script src="chem-data.js"></script>
 <script src="ptable.js"></script>
+<script src="chem-tables.js"></script>
+<script src="chemref.js"></script>
 <script>
 "use strict";
 // В Telegram вертикальный жест сворачивает страницу, а здесь много нажатий подряд
@@ -430,7 +432,11 @@ function renderTable() {
 }
 
 // ---------- вкладки ----------
-const TABS = [["lab", "🧪 Пробирки", renderLab], ["atom", "⚛️ Собери атом", renderAtom], ["table", "📋 Таблица", renderTable]];
+function renderRef(kind) {
+  return () => { const box = el("section", { class: "sheet" }); view.replaceChildren(box); ChemRef[kind](box); };
+}
+const TABS = [["lab", "🧪 Пробирки", renderLab], ["atom", "⚛️ Собери атом", renderAtom], ["table", "📋 Таблица", renderTable],
+  ["sol", "💧 Растворимость", renderRef("solubility")], ["act", "⚡ Ряд активности", renderRef("activity")]];
 let current = store.get("chem-tab", "lab");
 function renderTabs() {
   tabs.replaceChildren(...TABS.map(([key, title]) => el("button", { "aria-current": key === current ? "true" : "false",
