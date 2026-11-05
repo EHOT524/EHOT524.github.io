@@ -95,12 +95,13 @@ svg.model { width: 100%; height: auto; max-height: 40vh; display: block; backgro
 <div class="wrap">
   <header style="display:grid;gap:8px">
     <h1>Химическая лаборатория</h1>
-    <p class="lead">Смешивай вещества в пробирках и собирай атомы. Это тренировка: опыт и стрик в боте здесь не начисляются.</p>
+    <p class="lead">Смешивай вещества в пробирках, собирай атомы и смотри таблицу Менделеева. Это тренировка: опыт и стрик в боте здесь не начисляются.</p>
   </header>
   <nav class="tabs" id="tabs" aria-label="Разделы"></nav>
   <main id="view" style="display:grid;gap:16px"></main>
 </div>
 <script src="chem-data.js"></script>
+<script src="ptable.js"></script>
 <script>
 "use strict";
 // В Telegram вертикальный жест сворачивает страницу, а здесь много нажатий подряд
@@ -136,7 +137,7 @@ const GROUPS = [
 const TASKS = [
   ["Получи голубой осадок", r => has(r, "precipitate", "голуб")],
   ["Получи бурый осадок", r => has(r, "precipitate", "бур")],
-  ["Устрой «золотой дождь»", r => has(r, "precipitate", "золот")],
+  ["Получи ярко-жёлтый осадок", r => has(r, "precipitate", "ярко-жёлт")],
   ["Получи белый творожистый осадок", r => has(r, "precipitate", "творож")],
   ["Получи газ с запахом тухлых яиц", r => has(r, "gas", "тухлых")],
   ["Получи водород", r => has(r, "gas", "водород")],
@@ -410,8 +411,24 @@ function renderAtom() {
     el("div", { class: "atom" }, el("div", { style: "display:grid;gap:12px" }, model, card), controls)));
 }
 
+// ---------- таблица Менделеева ----------
+function renderTable() {
+  const box = el("section", { class: "sheet" });
+  view.replaceChildren(box);
+  PTable.mount(box, {
+    selected: store.get("chem-element", null),
+    onSelect: e => store.set("chem-element", e.z),
+    onBuild(e) {  // самый частый изотоп: A ≈ Ar, у хлора ³⁵Cl
+      atom = { p: e.z, n: Math.floor(e.school) - e.z, e: groundState(e.z).levels };
+      store.set("chem-atom", atom);
+      current = "atom"; store.set("chem-tab", "atom"); renderTabs();
+      window.scrollTo({ top: 0 });
+    },
+  });
+}
+
 // ---------- вкладки ----------
-const TABS = [["lab", "🧪 Пробирки", renderLab], ["atom", "⚛️ Собери атом", renderAtom]];
+const TABS = [["lab", "🧪 Пробирки", renderLab], ["atom", "⚛️ Собери атом", renderAtom], ["table", "📋 Таблица", renderTable]];
 let current = store.get("chem-tab", "lab");
 function renderTabs() {
   tabs.replaceChildren(...TABS.map(([key, title]) => el("button", { "aria-current": key === current ? "true" : "false",
