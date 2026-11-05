@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Химическая лаборатория: смешивай вещества в пробирках и собирай атомы из протонов, нейтронов и электронов.">
+<title>Химическая лаборатория</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и геометрии. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f; --warn: #a86a00;
+  --glass: #e9f1f8; --proton: #d9534f; --neutron: #8a96a3; --electron: #2f7ce0;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --warn: #f0b44c;
+  --glass: #1d2d3d; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --warn: #f0b44c;
+  --glass: #1d2d3d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(22px, 6vw, 34px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 15px; font-weight: 500; }
+p { margin: 0; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+button { font: 600 15px var(--body); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: .45; cursor: default; }
+.tabs button { border-color: var(--line); color: var(--ink); }
+.tabs button[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 14px; min-width: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > * { flex: 1; min-width: 0; }
+
+/* полка с реактивами */
+.shelf { display: grid; gap: 10px; }
+.group h2 { margin-bottom: 6px; color: var(--muted); font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 14px var(--body); padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: var(--paper); display: inline-flex; gap: 6px; align-items: center; }
+.chip b { font: 500 14px var(--mono); }
+.chip i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
+.chip.on { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.bench { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; align-items: end; }
+.bench .slot { display: grid; gap: 4px; justify-items: center; text-align: center; font-size: 13px; color: var(--muted); min-width: 0; }
+.bench .slot b { color: var(--ink); font: 500 14px var(--mono); overflow-wrap: anywhere; }
+svg.tube { width: 100%; max-width: 120px; height: auto; display: block; }
+.result { display: grid; gap: 6px; }
+.eq { font: 500 16px/1.4 var(--mono); overflow-wrap: anywhere; }
+.verdict { font-weight: 600; }
+.verdict.yes { color: var(--good); }
+.verdict.no { color: var(--hit); }
+.verdict.maybe { color: var(--warn); }
+.tasks { display: grid; gap: 4px; padding-left: 0; margin: 0; list-style: none; }
+.tasks li { font-size: 14px; }
+.tasks li.done { color: var(--good); }
+
+/* конструктор атома */
+.atom { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 640px) { .atom { grid-template-columns: 1fr; } .bench { grid-template-columns: 1fr 1fr; } .bench .mixer { grid-column: span 2; } }
+svg.model { width: 100%; height: auto; max-height: 40vh; display: block; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; }
+.counter { display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px; align-items: center; }
+.counter span { font-size: 14px; }
+.counter b { font: 600 18px var(--mono); min-width: 2.2ch; text-align: center; }
+.counter button { width: 40px; height: 36px; padding: 0; font-size: 20px; line-height: 1; }
+.big { font: 700 28px var(--display); }
+.status { border-radius: 6px; padding: 10px 12px; border: 1px solid; display: grid; gap: 6px; font-size: 15px; }
+.status.ok { border-color: var(--good); }
+.status.cond { border-color: var(--warn); }
+.status.bad { border-color: var(--hit); }
+.status h2 { font-size: 14px; }
+.status.ok h2 { color: var(--good); } .status.cond h2 { color: var(--warn); } .status.bad h2 { color: var(--hit); }
+.status ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>Химическая лаборатория</h1>
+    <p class="lead">Смешивай вещества в пробирках и собирай атомы. Это тренировка: опыт и стрик в боте здесь не начисляются.</p>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Разделы"></nav>
+  <main id="view" style="display:grid;gap:16px"></main>
+</div>
+<script src="chem-data.js"></script>
+<script>
+"use strict";
+// В Telegram вертикальный жест сворачивает страницу, а здесь много нажатий подряд
+try { window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior", JSON.stringify({ allow_vertical_swipe: false })); } catch {}
+
+const view = document.getElementById("view");
+const tabs = document.getElementById("tabs");
+const el = (tag, attrs = {}, ...kids) => {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) node.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) node.append(kid);
+  return node;
+};
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------- лаборатория ----------
+const R = Object.fromEntries(CHEM_LAB.reagents.map(r => [r.id, r]));
+const GROUPS = [
+  ["Кислоты", ["HCl", "H2SO4", "HNO3"]],
+  ["Щёлочи", ["NaOH", "KOH", "Ca(OH)2", "Ba(OH)2"]],
+  ["Растворы солей", ["NaCl", "KI", "KBr", "BaCl2", "AgNO3", "CuSO4", "CuCl2", "FeCl3", "FeSO4", "AlCl3", "ZnSO4", "MgCl2", "Na2CO3",
+                      "Na2SO4", "Na2S", "Na2SiO3", "K3PO4", "NH4Cl", "Pb(NO3)2", "KNO3"]],
+  ["Твёрдые вещества", ["Zn", "Mg", "Fe", "Cu", "Al", "CaCO3", "CuO"]],
+  ["Другое", ["H2O", "CO2", "фенолфталеин", "лакмус", "метиловый оранжевый"]],
+];
+const TASKS = [
+  ["Получи голубой осадок", r => has(r, "precipitate", "голуб")],
+  ["Получи бурый осадок", r => has(r, "precipitate", "бур")],
+  ["Устрой «золотой дождь»", r => has(r, "precipitate", "золот")],
+  ["Получи белый творожистый осадок", r => has(r, "precipitate", "творож")],
+  ["Получи газ с запахом тухлых яиц", r => has(r, "gas", "тухлых")],
+  ["Получи водород", r => has(r, "gas", "водород")],
+  ["Помути известковую воду", r => /CaCO₃/.test(r.eq) && /Ca\(OH\)₂/.test(r.eq)],
+  ["Вытесни медь из её соли", r => has(r, "coat", "мед")],
+  ["Сделай раствор малиновым", r => has(r, "color", "малинов")],
+  ["Растворите мрамор", r => has(r, "dissolve", "мрамор")],
+];
+const has = (r, type, word) => r.ok && r.effects.some(e => e.type === type && e.name.toLowerCase().includes(word));
+let picked = [];
+let lastResult = null;
+
+function pairOf(a, b) {
+  return CHEM_LAB.pairs[`${a}|${b}`] || CHEM_LAB.pairs[`${b}|${a}`];
+}
+
+function label(id) {
+  const r = R[id];
+  return r.formula ? r.formula : r.name;
+}
+
+function tubeSVG(id, result) {
+  // Пробирка: стекло, жидкость, осадок, пузырьки, налёт и кусочек твёрдого вещества
+  const r = id ? R[id] : null;
+  const effects = result?.effects || [];
+  const solid = r && r.kind === "solid";
+  let liquid = "var(--glass)";
+  if (r && r.kind !== "solid" && r.kind !== "gas") liquid = r.color || (r.kind === "indicator" ? "#f7fbff" : "#dfeaf5");
+  const color = effects.find(e => e.type === "color");
+  if (color) liquid = color.color;
+  const level = r || result ? (solid && !result ? 0 : 0.55) : 0;
+  const top = 150 - level * 120;
+  const parts = [];
+  parts.push(`<path d="M30 10 V150 a20 20 0 0 0 40 0 V10" fill="none" stroke="currentColor" stroke-width="2.5" opacity=".55"/>`);
+  if (level > 0) {
+    parts.push(`<path d="M32 ${top} H68 V150 a18 18 0 0 1 -36 0 Z" fill="${liquid}" opacity=".9">${result ? `<animate attributeName="opacity" from=".3" to=".9" dur=".8s"/>` : ""}</path>`);
+  }
+  const prec = effects.find(e => e.type === "precipitate");
+  if (prec) {
+    for (let i = 0; i < 60; i++) {  // осадок слоем на дне: чем ниже, тем шире пробирка
+      const row = Math.floor(i / 10), x = 37 + ((i * 7.3) % 26), y = 164 - row * 5 - ((i * 3) % 4);
+      parts.push(`<circle cx="${x}" cy="${y}" r="3.2" fill="${prec.color}" stroke="#0002" stroke-width=".5"><animate attributeName="cy" from="${top + 6}" to="${y}" dur="${1 + (i % 5) * 0.3}s" fill="freeze"/></circle>`);
+    }
+  }
+  if (effects.some(e => e.type === "gas")) {
+    for (let i = 0; i < 8; i++) {
+      const x = 38 + (i * 9) % 24;
+      parts.push(`<circle cx="${x}" cy="150" r="2.6" fill="none" stroke="currentColor" opacity=".6"><animate attributeName="cy" values="150;${top}" dur="${1.2 + i * 0.15}s" repeatCount="indefinite"/></circle>`);
+    }
+  }
+  if (solid || (result && effects.some(e => e.type === "coat" || e.type === "dissolve"))) {
+    const coat = effects.find(e => e.type === "coat");
+    const fill = coat ? (coat.name.includes("мед") ? "#b5562c" : coat.name.includes("серебр") ? "#c9ced6" : "#7d8794") : "#9aa5b1";
+    const shrink = effects.some(e => e.type === "dissolve");
+    parts.push(`<rect x="41" y="${shrink ? 152 : 140}" width="18" height="${shrink ? 8 : 18}" rx="3" fill="${fill}">${shrink ? `<animate attributeName="height" from="18" to="8" dur="1.5s"/>` : ""}</rect>`);
+  }
+  if (effects.some(e => e.type === "heat")) {
+    parts.push(`<path d="M20 120 q-6 -10 0 -20 q6 -10 0 -20" fill="none" stroke="#e8743b" stroke-width="2"><animate attributeName="opacity" values="0;1;0" dur="1.4s" repeatCount="indefinite"/></path>`);
+  }
+  return `<svg class="tube" viewBox="0 0 100 180" role="img" aria-label="${r ? r.name : "пустая пробирка"}" style="color:var(--ink)">${parts.join("")}</svg>`;
+}
+
+function renderLab() {
+  const done = new Set(store.get("chem-tasks", []));
+  view.replaceChildren();
+  const bench = el("section", { class: "sheet" });
+  const slots = [0, 1].map(i => {
+    const id = picked[i];
+    const slot = el("div", { class: "slot" });
+    slot.innerHTML = tubeSVG(id, null);
+    slot.append(el("b", {}, id ? label(id) : "—"), el("span", {}, id ? R[id].name : i === 0 ? "выбери первое вещество" : "выбери второе"));
+    return slot;
+  });
+  const mixer = el("div", { class: "slot mixer" });
+  mixer.innerHTML = tubeSVG(lastResult ? picked[0] : null, lastResult);
+  mixer.append(el("div", { class: "row", style: "width:100%" },
+    el("button", { class: "main", disabled: picked.length < 2 || null, onclick: doMix }, "Смешать"),
+    el("button", { onclick: () => { picked = []; lastResult = null; renderLab(); } }, "Вылить")));
+  bench.append(el("h2", {}, "Лабораторный стол"), el("div", { class: "bench" }, slots, mixer));
+  if (lastResult) bench.append(resultBlock(lastResult));
+  view.append(bench);
+
+  const shelf = el("section", { class: "sheet shelf" }, el("h2", {}, "Полка с реактивами"),
+    el("p", { class: "note" }, "Нажми на два вещества, затем «Смешать». Твёрдые вещества бросаются в раствор."));
+  for (const [title, ids] of GROUPS) {
+    const chips = ids.filter(id => R[id]).map(id => {
+      const r = R[id];
+      const chip = el("button", { class: "chip" + (picked.includes(id) ? " on" : ""), "aria-pressed": picked.includes(id) ? "true" : "false",
+        onclick: () => pick(id) });
+      if (r.color) chip.append(el("i", { style: `background:${r.color}` }));
+      if (r.formula) chip.append(el("b", {}, r.formula));
+      chip.append(r.kind === "indicator" ? r.name : (r.formula ? "" : r.name));
+      chip.title = r.name;
+      return chip;
+    });
+    shelf.append(el("div", { class: "group" }, el("h2", {}, title), el("div", { class: "chips" }, chips)));
+  }
+  view.append(shelf);
+
+  const tasks = el("section", { class: "sheet" }, el("h2", {}, `Задания: ${done.size} из ${TASKS.length}`),
+    el("ul", { class: "tasks" }, TASKS.map(([t], i) => el("li", { class: done.has(i) ? "done" : "" }, `${done.has(i) ? "✅" : "▫️"} ${t}`))));
+  view.append(tasks);
+}
+
+function resultBlock(res) {
+  const cls = res.ok === true ? "yes" : res.ok === false ? "no" : "maybe";
+  const head = res.ok === true ? "Реакция идёт" : res.ok === false ? "Реакция не идёт" : "Зависит от условий";
+  return el("div", { class: "result" },
+    el("p", { class: `verdict ${cls}` }, head),
+    res.eq ? el("p", { class: "eq" }, res.eq) : null,
+    el("p", {}, res.text),
+    el("p", { class: "note" }, res.why));
+}
+
+function pick(id) {
+  lastResult = null;
+  if (picked.includes(id)) picked = picked.filter(x => x !== id);
+  else picked = picked.length >= 2 ? [picked[1], id] : [...picked, id];
+  renderLab();
+}
+
+function doMix() {
+  const [a, b] = picked;
+  lastResult = pairOf(a, b) || { ok: null, eq: "", effects: [], text: "Нет данных.", why: "" };
+  const done = new Set(store.get("chem-tasks", []));
+  TASKS.forEach(([, test], i) => { if (test(lastResult)) done.add(i); });
+  store.set("chem-tasks", [...done]);
+  renderLab();
+}
+
+// ---------- конструктор атома ----------
+const NAMES = ["", "водород", "гелий", "литий", "бериллий", "бор", "углерод", "азот", "кислород", "фтор", "неон", "натрий", "магний", "алюминий",
+  "кремний", "фосфор", "сера", "хлор", "аргон", "калий", "кальций"];
+const SYMBOLS = ["", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca"];
+// Изотопы: массовое число → «стабильный» или период полураспада. Взяты известные и долгоживущие
+const ISOTOPES = {
+  1: { 1: "s", 2: "s", 3: "12,3 года" }, 2: { 3: "s", 4: "s", 6: "0,8 с" }, 3: { 6: "s", 7: "s", 8: "0,84 с" },
+  4: { 7: "53 дня", 9: "s", 10: "1,4 млн лет" }, 5: { 8: "0,77 с", 10: "s", 11: "s", 12: "0,02 с" },
+  6: { 10: "19 с", 11: "20 минут", 12: "s", 13: "s", 14: "5730 лет", 15: "2,4 с" }, 7: { 13: "10 минут", 14: "s", 15: "s", 16: "7 с" },
+  8: { 14: "71 с", 15: "2 минуты", 16: "s", 17: "s", 18: "s", 19: "27 с" }, 9: { 17: "64 с", 18: "110 минут", 19: "s", 20: "11 с" },
+  10: { 19: "17 с", 20: "s", 21: "s", 22: "s", 23: "37 с" }, 11: { 22: "2,6 года", 23: "s", 24: "15 часов" },
+  12: { 24: "s", 25: "s", 26: "s", 27: "9,5 минуты", 28: "21 час" }, 13: { 26: "720 тыс. лет", 27: "s", 28: "2,2 минуты" },
+  14: { 28: "s", 29: "s", 30: "s", 31: "2,6 часа", 32: "150 лет" }, 15: { 31: "s", 32: "14 дней", 33: "25 дней" },
+  16: { 32: "s", 33: "s", 34: "s", 35: "87 дней", 36: "s" }, 17: { 35: "s", 36: "300 тыс. лет", 37: "s" },
+  18: { 36: "s", 37: "35 дней", 38: "s", 39: "269 лет", 40: "s" }, 19: { 39: "s", 40: "1,25 млрд лет", 41: "s" },
+  20: { 40: "s", 41: "100 тыс. лет", 42: "s", 43: "s", 44: "s", 45: "163 дня", 46: "s", 48: "s" },
+};
+const CAP = [2, 8, 8, 2];                // школьная модель до кальция
+const CATION = { 1: 1, 3: 1, 11: 1, 19: 1, 4: 2, 12: 2, 20: 2, 13: 3 };   // обычный заряд иона в солях
+const ANION_FREE = new Set([1, 3, 5, 6, 8, 9, 11, 13, 14, 15, 16, 17, 19]);  // атом удерживает один лишний электрон и сам по себе
+const ANION_COMPOUND = { 1: 1, 6: 4, 7: 3, 8: 2, 9: 1, 15: 3, 16: 2, 17: 1 };  // ионы, которые бывают в веществах
+const ANION_WHERE = { 1: "гидридах металлов (NaH)", 6: "карбидах (Al₄C₃)", 7: "нитридах (Li₃N)", 8: "оксидах (CaO, Na₂O)", 9: "фторидах (NaF)",
+  15: "фосфидах (Ca₃P₂)", 16: "сульфидах (Na₂S)", 17: "хлоридах (NaCl)" };
+let atom = store.get("chem-atom", { p: 6, n: 6, e: [2, 4, 0, 0] });
+
+function groundState(count) {
+  const out = [0, 0, 0, 0];
+  let left = count;
+  for (let i = 0; i < 4 && left > 0; i++) { out[i] = Math.min(CAP[i], left); left -= out[i]; }
+  return { levels: out, left };
+}
+const SUP = n => String(n).replace(/./g, ch => "⁰¹²³⁴⁵⁶⁷⁸⁹"["0123456789".indexOf(ch)] ?? ch);
+const chargeText = q => q === 0 ? "" : `${Math.abs(q) > 1 ? SUP(Math.abs(q)) : ""}${q > 0 ? "⁺" : "⁻"}`;
+
+function analyse() {
+  const { p, n, e } = atom;
+  const electrons = e.reduce((a, b) => a + b, 0);
+  const A = p + n;
+  const notes = [];     // [уровень, текст]: ok, cond, bad
+  if (p === 0) {
+    if (n === 0 && electrons === 0) return { title: "Пусто", notes: [["cond", "Добавь протоны: их число задаёт, какой это элемент."]] };
+    notes.push(["bad", "Без протонов атома нет: элемент определяется числом протонов. Одинокий нейтрон распадается примерно за 15 минут, "
+      + "а электрону без положительного ядра не за что держаться."]);
+    return { title: "Это не атом", notes };
+  }
+  const known = ISOTOPES[p] || {};
+  const masses = Object.keys(known).map(Number);
+  const name = NAMES[p];
+  if (known[A] === "s") notes.push(["ok", `Ядро ${name}-${A} стабильно: такой изотоп есть в природе и не распадается.`]);
+  else if (known[A]) notes.push(["cond", `${cap(name)}-${A} радиоактивен: период полураспада ${known[A]}. Он существует, но со временем распадается, поэтому в природе его мало или его получают искусственно.`]);
+  else if (A < Math.min(...masses) - 1) notes.push(["bad", `Слишком мало нейтронов: протоны отталкиваются, и без нейтронов-«клея» ядро ${name}-${A} сразу разлетается, выбрасывая протон.`]);
+  else if (A > Math.max(...masses) + 2) notes.push(["bad", `Слишком много нейтронов: ядро не удерживает лишние нейтроны и сразу их выбрасывает. Изотопа ${name}-${A} не бывает даже в лабораториях.`]);
+  else notes.push(["cond", `${cap(name)}-${A} в природе не встречается: такое ядро, если его удаётся получить на ускорителе, радиоактивно и живёт очень недолго — от долей секунды до нескольких минут.`]);
+
+  const over = e.findIndex((k, i) => k > CAP[i]);
+  if (over >= 0) notes.push(["bad", `На ${over + 1}-м уровне помещается не больше ${CAP[over]} электронов (в школьной модели атомов до кальция). Лишнему электрону там нет места.`]);
+  else if (electrons > 0) {
+    const ground = groundState(electrons).levels;
+    if (ground.some((k, i) => k !== e[i])) notes.push(["cond", "Это возбуждённое состояние: электрон перескочил на более дальний уровень, хотя ближний не заполнен. "
+      + "Так бывает, когда атом получает энергию — от нагрева, света или электрического разряда. Через миллиардные доли секунды электрон возвращается, "
+      + "а атом испускает свет: так светятся неоновые вывески и салют."]);
+  }
+  const q = p - electrons;
+  if (q === 0 && electrons > 0) notes.push(["ok", "Электронов столько же, сколько протонов: атом электрически нейтрален."]);
+  else if (q > 0) {
+    const outer = groundState(p).levels.filter(Boolean).at(-1);
+    if (electrons === 0) notes.push(["cond", "Голое ядро без электронов бывает только в плазме при миллионах градусов — например, в недрах Солнца."]);
+    else if (CATION[p] === q) notes.push(["ok", `Ион ${SYMBOLS[p]}${chargeText(q)} — обычный: в таком виде ${name} бывает в солях и растворах.`]);
+    else if (q > outer) notes.push(["cond", `Чтобы получить ${SYMBOLS[p]}${chargeText(q)}, нужно оторвать электроны внутреннего уровня, а они держатся очень прочно. `
+      + "Такой ион бывает только в плазме при очень высокой температуре: в звёздах, молниях, лабораторных разрядах."]);
+    else notes.push(["cond", `Ион ${SYMBOLS[p]}${chargeText(q)} получается, если затратить энергию: в пламени, электрическом разряде или под действием сильного окислителя. `
+      + (CATION[p] ? `Обычный заряд у иона этого элемента другой: ${SYMBOLS[p]}${chargeText(CATION[p])}.` : "Устойчивых ионов в растворах этот элемент не образует.")]);
+  } else if (q < 0) {
+    const extra = -q;
+    if (extra === 1 && ANION_FREE.has(p) && ANION_COMPOUND[p] === 1) notes.push(["ok", `Ион ${SYMBOLS[p]}⁻ устойчив: атом охотно удерживает лишний электрон, такой ион бывает в солях, например ${p === 9 ? "во" : "в"} ${ANION_WHERE[p]}.`]);
+    else if (extra === 1 && ANION_FREE.has(p)) notes.push(["cond", `Ион ${SYMBOLS[p]}⁻ существует сам по себе в газе: атом слабо удерживает один лишний электрон. В веществах ${name} обычно встречается в другом виде.`]);
+    else if (ANION_COMPOUND[p] === extra) notes.push(["cond", `Сам по себе ион ${SYMBOLS[p]}${chargeText(q)} развалится: лишние электроны отталкиваются и улетают. `
+      + `Но внутри веществ он существует — в ${ANION_WHERE[p]}: его удерживают соседние положительные ионы кристалла.`]);
+    else notes.push(["bad", `Атом ${SYMBOLS[p]} не может удержать столько лишних электронов (${extra}): они отталкиваются от уже имеющихся и улетают. Такого иона не бывает ни сам по себе, ни в веществах.`]);
+  }
+  const worst = notes.some(([k]) => k === "bad") ? "bad" : notes.some(([k]) => k === "cond") ? "cond" : "ok";
+  const title = { ok: q === 0 ? "Такой атом существует" : "Такая частица существует", cond: "Существует только при определённых условиях", bad: "Такого быть не может" }[worst];
+  return { title, notes, worst };
+}
+const cap = s => s[0].toUpperCase() + s.slice(1);
+
+function atomSVG() {
+  const { p, n, e } = atom;
+  const parts = [];
+  const cx = 160, cy = 160;
+  const radii = [52, 82, 112, 142];
+  e.forEach((k, i) => {
+    if (k > 0 || i < 2) parts.push(`<circle cx="${cx}" cy="${cy}" r="${radii[i]}" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-dasharray="${k ? 0 : 4}"/>`);
+    for (let j = 0; j < k; j++) {
+      const a = (j / k) * Math.PI * 2 - Math.PI / 2;
+      parts.push(`<circle cx="${(cx + radii[i] * Math.cos(a)).toFixed(1)}" cy="${(cy + radii[i] * Math.sin(a)).toFixed(1)}" r="6" fill="var(--electron)"/>`);
+    }
+  });
+  const nucleons = [...Array(p).fill("p"), ...Array(n).fill("n")];
+  nucleons.sort((a, b) => (a < b ? -1 : 1));
+  const mixed = nucleons.map((t, i) => [t, (i * 0.618) % 1]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+  mixed.forEach((t, i) => {
+    const r = 5.5 * Math.sqrt(i), a = i * 2.39996;
+    parts.push(`<circle cx="${(cx + r * Math.cos(a)).toFixed(1)}" cy="${(cy + r * Math.sin(a)).toFixed(1)}" r="6.5" fill="${t === "p" ? "var(--proton)" : "var(--neutron)"}" stroke="var(--sheet)" stroke-width="1"/>`);
+  });
+  return `<svg class="model" viewBox="0 0 320 320" role="img" aria-label="Модель атома" style="color:var(--ink)">${parts.join("")}</svg>`;
+}
+
+function counter(label, value, dec, inc, min, max) {
+  return el("div", { class: "counter" }, el("span", {}, label),
+    el("button", { "aria-label": `убрать: ${label}`, disabled: value <= min || null, onclick: dec }, "−"),
+    el("b", {}, String(value)),
+    el("button", { "aria-label": `добавить: ${label}`, disabled: value >= max || null, onclick: inc }, "+"));
+}
+
+function renderAtom() {
+  store.set("chem-atom", atom);
+  const { p, n, e } = atom;
+  const electrons = e.reduce((a, b) => a + b, 0);
+  const info = analyse();
+  const q = p - electrons;
+  view.replaceChildren();
+  const model = el("div");
+  model.innerHTML = atomSVG();
+  const set = fn => () => { fn(); renderAtom(); };
+  const controls = el("div", { style: "display:grid;gap:8px" },
+    counter("Протоны", p, set(() => atom.p--), set(() => atom.p++), 0, 20),
+    counter("Нейтроны", n, set(() => atom.n--), set(() => atom.n++), 0, 30),
+    ...e.map((k, i) => counter(`Электроны, ${i + 1}-й уровень`, k, set(() => atom.e[i]--), set(() => atom.e[i]++), 0, 12)),
+    el("div", { class: "row" },
+      el("button", { onclick: set(() => { atom.e = groundState(atom.p).levels; }) }, "Электроны как в атоме"),
+      el("button", { onclick: set(() => { atom = { p: 0, n: 0, e: [0, 0, 0, 0] }; }) }, "Очистить")));
+  const symbol = p ? `${SUP(p + n)}${SYMBOLS[p]}${chargeText(q)}` : "—";
+  const card = el("div", { style: "display:grid;gap:10px" },
+    el("div", {}, el("div", { class: "big" }, symbol), el("p", { class: "note" }, p ? `${NAMES[p]}, номер ${p}, массовое число ${p + n}${q ? `, заряд ${q > 0 ? "+" : "−"}${Math.abs(q)}` : ""}` : "добавь протоны")),
+    el("p", { class: "note" }, `Электроны по уровням: ${e.filter((k, i) => k || i === 0).join(", ")}`),
+    el("div", { class: `status ${info.worst || "cond"}` }, el("h2", {}, info.title),
+      el("ul", {}, info.notes.map(([, t]) => el("li", {}, t)))));
+  view.append(el("section", { class: "sheet" }, el("h2", {}, "Собери атом"),
+    el("p", { class: "note" }, "Красные — протоны, серые — нейтроны, синие — электроны. Число протонов задаёт элемент (до кальция)."),
+    el("div", { class: "atom" }, el("div", { style: "display:grid;gap:12px" }, model, card), controls)));
+}
+
+// ---------- вкладки ----------
+const TABS = [["lab", "🧪 Пробирки", renderLab], ["atom", "⚛️ Собери атом", renderAtom]];
+let current = store.get("chem-tab", "lab");
+function renderTabs() {
+  tabs.replaceChildren(...TABS.map(([key, title]) => el("button", { "aria-current": key === current ? "true" : "false",
+    onclick: () => { current = key; store.set("chem-tab", key); renderTabs(); } }, title)));
+  (TABS.find(t => t[0] === current) || TABS[0])[2]();
+}
+renderTabs();
+window.chem = { setAtom(a) { atom = a; current = "atom"; renderTabs(); }, analyse };  // для проверки из консоли
+</script>
+</body>
+</html>
