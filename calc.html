@@ -27,20 +27,22 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.4 var(--body);
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-.wrap { max-width: 440px; min-height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;
+/* Всё помещается в высоту экрана: клавиши растягиваются или сжимаются, листать не нужно */
+.wrap { max-width: 440px; height: 100vh; height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; gap: 8px;
   padding: 12px max(12px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px)); }
 .screen { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
 .history { font: 400 13px/1.4 var(--mono); color: var(--muted); min-height: 18px; text-align: right; overflow-wrap: anywhere; }
-.expr { font: 500 20px/1.3 var(--mono); text-align: right; overflow-wrap: anywhere; min-height: 26px; -webkit-user-select: text; user-select: text; }
+.expr { font: 500 20px/1.3 var(--mono); text-align: right; overflow-wrap: anywhere; min-height: 26px; max-height: 52px; overflow-y: auto; -webkit-user-select: text; user-select: text; }
 .result { font: 600 30px/1.2 var(--mono); text-align: right; overflow-wrap: anywhere; min-height: 36px; -webkit-user-select: text; user-select: text; }
 .result.error { color: var(--hit); font-size: 16px; font-family: var(--body); font-weight: 500; }
 .bar { display: flex; gap: 8px; align-items: center; justify-content: space-between; color: var(--muted); font-size: 13px; }
 .copy { font: 500 13px var(--body); color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
-.keys { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; flex: 1; align-content: end; }
-.keys button { font: 500 19px var(--body); color: var(--ink); background: var(--key); border: 0; border-radius: 8px; min-height: 52px; padding: 0; cursor: pointer; }
+.keys { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(6, minmax(0, 84px)); gap: 6px; flex: 1; min-height: 0; align-content: end; }
+.keys button { font: 500 19px var(--body); color: var(--ink); background: var(--key); border: 0; border-radius: 8px; min-height: 0; padding: 0; cursor: pointer; }
+@media (max-height: 520px) { .keys button { font-size: 16px; } .result { font-size: 24px; } .history { display: none; } }
 .keys button:active { filter: brightness(0.9); }
 .keys .fn { background: var(--fn); font-size: 16px; }
 .keys .op { background: var(--fn); font-size: 22px; }
@@ -99,8 +101,16 @@ sup { font-size: 0.7em; }
   </section>
 </main>
 <script>
-// В Telegram вертикальный жест сворачивает страницу, а здесь часто жмут по клавишам подряд
-try { window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior", JSON.stringify({ allow_vertical_swipe: false })); } catch {}
+// Telegram открывает страницу на полэкрана, поэтому сразу просим весь экран. Вертикальный жест сворачивает страницу, а здесь часто жмут подряд
+function telegram(event, data = {}) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), "*");
+  } catch {}
+}
+telegram("web_app_ready");
+telegram("web_app_expand");
+telegram("web_app_setup_swipe_behavior", { allow_vertical_swipe: false });
 
 const exprEl = document.getElementById("expr");
 const resultEl = document.getElementById("result");
