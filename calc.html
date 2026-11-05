@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="description" content="Калькулятор для задач по физике: степени, корни, синус и запись через 10 в степени.">
+<meta name="description" content="Калькулятор для задач по физике и химии: степени, корни, синус, запись через 10 в степени. В химии рядом таблица Менделеева.">
 <title>Калькулятор</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -50,10 +50,22 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.
 .keys .eq { background: var(--accent); color: var(--accent-ink); grid-column: span 2; font-size: 24px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 sup { font-size: 0.7em; }
+/* В химии сверху две вкладки: калькулятор и таблица Менделеева (?chem=1, ?tab=table открывает таблицу) */
+[hidden] { display: none !important; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: none; }
+.tabs button { font: 600 14px var(--body); padding: 9px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.tabs button[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.view { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+#tableView { overflow-y: auto; -webkit-user-select: text; user-select: text; }
 </style>
 </head>
 <body>
 <main class="wrap">
+  <nav class="tabs" id="tabs" hidden aria-label="Разделы">
+    <button type="button" data-tab="calc" aria-current="true">🧮 Калькулятор</button>
+    <button type="button" data-tab="table" aria-current="false">📋 Таблица Менделеева</button>
+  </nav>
+  <div class="view" id="calcView">
   <section class="screen" aria-live="polite">
     <div class="history" id="history"></div>
     <div class="expr" id="expr"></div>
@@ -99,7 +111,10 @@ sup { font-size: 0.7em; }
     <button class="fn" data-in="Ans" aria-label="Прошлый ответ">Ans</button>
     <button class="eq" data-act="eq">=</button>
   </section>
+  </div>
+  <div class="view" id="tableView" hidden></div>
 </main>
+<script src="ptable.js"></script>
 <script>
 // Telegram открывает страницу на полэкрана, поэтому сразу просим весь экран. Вертикальный жест сворачивает страницу, а здесь часто жмут подряд
 function telegram(event, data = {}) {
@@ -284,8 +299,9 @@ document.querySelector(".keys").addEventListener("click", e => {
   }
 });
 
-// С компьютера можно печатать
+// С компьютера можно печатать (но не когда ищут элемент в таблице)
 document.addEventListener("keydown", e => {
+  if (document.getElementById("calcView").hidden || e.target.tagName === "INPUT") return;
   const map = { "*": "×", "/": "÷", "-": "−", ".": ",", "p": "π" };
   if (/^[0-9+()^,]$/.test(e.key) || map[e.key]) { e.preventDefault(); input(map[e.key] || e.key); }
   else if (e.key === "Enter" || e.key === "=") { e.preventDefault(); equals(); }
@@ -301,7 +317,28 @@ document.getElementById("copy").addEventListener("click", async () => {
   setTimeout(() => { btn.textContent = "Скопировать"; }, 1500);
 });
 
-window.calc = { evaluate, format, plain };  // для проверки из консоли
+// ---------- химия: вкладка с таблицей Менделеева ----------
+const params = new URLSearchParams(location.search);
+let tableReady = false;
+function showTab(tab) {
+  document.getElementById("calcView").hidden = tab !== "calc";
+  document.getElementById("tableView").hidden = tab !== "table";
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-current", String(b.dataset.tab === tab));
+  if (tab === "table" && !tableReady && window.PTable) {
+    tableReady = true;
+    PTable.mount(document.getElementById("tableView"), {
+      onUse(ar) { input(String(ar).replace(".", ",")); showTab("calc"); },  // масса сразу в выражение: удобно считать Mr
+    });
+  }
+}
+if (params.get("chem")) {
+  document.getElementById("tabs").hidden = false;
+  document.querySelector(".bar span").textContent = "Массы элементов — во вкладке «Таблица». Ответ впиши в бота.";
+  document.getElementById("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); });
+  showTab(params.get("tab") === "table" ? "table" : "calc");
+}
+
+window.calc = { evaluate, format, plain, showTab };  // для проверки из консоли
 render();
 </script>
 </body>
