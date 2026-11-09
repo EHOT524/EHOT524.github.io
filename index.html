@@ -413,6 +413,108 @@ function drawOhm(w, h, v, r, t) {
   label(`I = ${smart(r.I)} А`, x1 + 8, y1 - 16, color("--hit"), 12);
 }
 
+// ---------- колебательный контур ----------
+
+// Настоящий период — миллисекунды, глазом не увидеть, поэтому время замедлено: период на экране от 1 до 10 секунд
+const LC_STAGES = ["Конденсатор разряжается, ток растёт", "Ток слабеет, конденсатор перезаряжается",
+  "Конденсатор разряжается обратно, ток растёт", "Ток слабеет, конденсатор заряжается как в начале"];
+
+function circuit(v, t) {
+  const L = v.L / 1000, C = v.C / 1e6, R = v.mode === "damped" ? v.R : 0;
+  const w0 = 1 / Math.sqrt(L * C), beta = R / (2 * L), Q = C * v.U0, W0 = C * v.U0 ** 2 / 2;
+  const swings = beta < w0, w = swings ? Math.sqrt(w0 * w0 - beta * beta) : 0, T = swings ? 2 * Math.PI / w : 0;
+  const ideal = 2 * Math.PI / w0, shown = Math.min(10, Math.max(1, ideal * 1500)), slow = shown / ideal;
+  // Без колебаний заряд стекает по двум экспонентам: s₁ медленная, s₂ быстрая
+  const root = Math.sqrt(Math.max(beta * beta - w0 * w0, 1e-6 * w0 * w0)), s1 = -beta + root, s2 = -beta - root;
+  // Затухание повторяем сначала, когда от размаха остались проценты
+  const span = !beta ? 2 * ideal : Math.log(40) / (swings ? beta : -s1), real = (t / slow) % span;
+  const fade = Math.exp(-beta * real), phase = w * real;
+  // В начале ток равен нулю: конденсатор только что замкнули на катушку
+  const q = swings ? Q * fade * (Math.cos(phase) + beta / w * Math.sin(phase)) : Q * (s2 * Math.exp(s1 * real) - s1 * Math.exp(s2 * real)) / (s2 - s1);
+  const i = swings ? Q * fade * w0 * w0 / w * Math.sin(phase)  // i = −dq/dt
+    : -Q * s1 * s2 * (Math.exp(s1 * real) - Math.exp(s2 * real)) / (s2 - s1);
+  const Imax = v.U0 * Math.sqrt(C / L);
+  return { T, f: swings ? 1 / T : 0, swings, beta, w, Q, q, i, Imax, W0, WC: q * q / (2 * C), WL: L * i * i / 2,
+    real, span, slow, stage: swings ? Math.floor(((phase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / (Math.PI / 2)) : -1 };
+}
+
+function plateSigns(cx, y, n, sign, style) {
+  for (let k = 0; k < n; k++) label(sign, cx - 22 + k * 10, y, style, 12);
+}
+
+function drawCircuit(w, h, v, r) {
+  paper(w, h);
+  const ink = color("--ink"), split = w * 0.46, x1 = 26, x2 = split - 18, y1 = 44, y2 = h - 24, cy = (y1 + y2) / 2;
+  label(r.swings ? LC_STAGES[r.stage] : "Сопротивление слишком большое: колебаний нет", 10, 20, ink, 12);
+  // провода: сверху и снизу, слева через конденсатор, справа через катушку
+  const coilTop = cy - 34, coilBottom = cy + 34;
+  line(x1, y1, x2, y1, ink); line(x1, y2, x2, y2, ink);
+  line(x1, y1, x1, cy - 6, ink); line(x1, cy + 6, x1, y2, ink);
+  line(x2, y1, x2, coilTop, ink); line(x2, coilBottom, x2, y2, ink);
+  line(x1 - 18, cy - 6, x1 + 18, cy - 6, ink, 3); line(x1 - 18, cy + 6, x1 + 18, cy + 6, ink, 3);
+  // заряд на обкладках и поле между ними: чем больше заряд, тем ярче
+  const share = r.q / r.Q, n = Math.round(Math.abs(share) * 4);
+  if (n) {
+    plateSigns(x1, cy - 12, n, share > 0 ? "+" : "−", color(share > 0 ? "--hit" : "--accent"));
+    plateSigns(x1, cy + 22, n, share > 0 ? "−" : "+", color(share > 0 ? "--accent" : "--hit"));
+    ctx.globalAlpha = Math.abs(share);
+    for (let k = -1; k <= 1; k++) line(x1 + k * 9, cy - 4, x1 + k * 9, cy + 4, color("--accent"), 1.5);
+    ctx.globalAlpha = 1;
+  }
+  label("C", x1 + 24, cy + 4, color("--muted"), 12);
+  // катушка: витки и магнитное поле, которое растёт вместе с током
+  const flow = Math.min(1, Math.abs(r.i) / r.Imax);
+  if (flow > 0.02) {
+    ctx.globalAlpha = flow * 0.8; ctx.strokeStyle = color("--good"); ctx.lineWidth = 2;
+    for (const k of [1, 1.6]) { ctx.beginPath(); ctx.ellipse(x2, cy, 12 * k + 6, 44 * k, 0, 0, 7); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = ink; ctx.lineWidth = 2;
+  for (let k = 0; k < 5; k++) {
+    const top = coilTop + k * 13.6;
+    ctx.beginPath(); ctx.arc(x2, top + 6.8, 6.8, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  }
+  label("L", x2 - 22, cy + 4, color("--muted"), 12);
+  // Точки показывают движение заряда: сдвиг пропорционален прошедшему заряду, поэтому они качаются туда и обратно
+  const path = [[x1, cy - 8], [x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, cy + 8]];
+  const parts = path.slice(1).map((p, k) => Math.hypot(p[0] - path[k][0], p[1] - path[k][1]));
+  const length = parts.reduce((a, b) => a + b, 0), count = 16, gap = length / count;
+  const shift = (1 - share) * gap * 1.5;
+  for (let k = 0; k < count; k++) {
+    let s = ((k * gap + shift) % length + length) % length, m = 0;
+    while (s > parts[m]) s -= parts[m++];
+    const [px, py] = path[m], [qx, qy] = path[m + 1];
+    dot(px + (qx - px) * s / parts[m], py + (qy - py) * s / parts[m], 3, color("--hit"));
+  }
+  // графики заряда и тока, бегунок показывает «сейчас»
+  const gx = split + 12, gw = w - gx - 12, top = 46, gh = Math.max(40, h * 0.58 - top), mid = top + gh / 2;
+  line(gx, top, gx, top + gh, ink, 1); line(gx, mid, gx + gw, mid, ink, 1);
+  const curve = (key, style) => {
+    ctx.strokeStyle = style; ctx.lineWidth = 2; ctx.beginPath();
+    for (let k = 0; k <= 120; k++) {
+      const s = circuit(v, r.span * k / 121 * r.slow), value = key === "q" ? s.q / r.Q : s.i / r.Imax;
+      const x = gx + gw * k / 120, y = mid - value * (gh / 2 - 4);
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  };
+  curve("q", color("--accent")); curve("i", color("--hit"));
+  const cursor = gx + gw * r.real / r.span;
+  line(cursor, top, cursor, top + gh, color("--muted"), 1, [3, 3]);
+  label("— заряд q", gx, top - 6, color("--accent"), 11);
+  label("— ток i", gx + Math.min(90, gw / 2), top - 6, color("--hit"), 11);
+  label("t", gx + gw - 8, mid - 6, color("--muted"), 11);
+  // энергия: у конденсатора в электрическом поле, у катушки в магнитном, вместе — постоянная без сопротивления
+  const bars = [["Wэл", r.WC, "--accent"], ["Wмагн", r.WL, "--good"]], bx = gx + 52, bw = gw - 52;
+  bars.forEach(([name, value, style], k) => {
+    const y = top + gh + 22 + k * 24;
+    label(name, gx, y + 10, color("--muted"), 11);
+    ctx.strokeStyle = color("--line"); ctx.lineWidth = 1; ctx.strokeRect(bx, y, bw, 12);
+    ctx.fillStyle = color(style); ctx.fillRect(bx, y, bw * Math.min(1, value / r.W0), 12);
+  });
+  if (r.slow > 1) label(`замедлено в ${Math.round(r.slow).toLocaleString("ru")} раз`, gx, h - 6, color("--muted"), 10);
+}
+
 // ---------- линза ----------
 
 function lens(v) {
@@ -617,6 +719,27 @@ const SIMS = {
     formulas: ["I = ℰ / (R + r)", "R = R₁ + R₂ при последовательном", "R = R₁ · R₂ / (R₁ + R₂) при параллельном", "P = U · I"],
     remark: "Точки на схеме показывают направление тока от плюса к минусу. Чем больше ток, тем быстрее они движутся. При параллельном соединении ток делится между ветвями: через меньшее сопротивление идёт больший ток.",
     tasks: ["Соедини два равных резистора последовательно, а потом параллельно. Во сколько раз изменилось сопротивление?", "Поставь внутреннее сопротивление 0 Ом. Чему равно напряжение на цепи?", "Найди R₁, при котором мощность наибольшая, если резистор один. Сравни с r."],
+  },
+  kontur: {
+    title: "Колебательный контур", section: "Электричество", brief: "Конденсатор и катушка обмениваются энергией", live: true,
+    fields: [
+      { id: "L", label: "Индуктивность катушки", unit: "мГн", min: 1, max: 100, step: 1, value: 10 },
+      { id: "C", label: "Ёмкость конденсатора", unit: "мкФ", min: 1, max: 100, step: 1, value: 10 },
+      { id: "U0", label: "Конденсатор зарядили до", unit: "В", min: 1, max: 50, step: 1, value: 10 },
+      { id: "R", label: "Сопротивление провода", unit: "Ом", min: 0.1, max: 20, step: 0.1, value: 2, when: v => v.mode === "damped" },
+    ],
+    selects: [{ id: "mode", label: "Контур", first: true, options: [["ideal", "Идеальный, без потерь"], ["damped", "С сопротивлением: колебания затухают"]] }],
+    compute: circuit,
+    reads: (r, v) => [["Период", r.swings ? smart(r.T * 1000) + " мс" : "нет"], ["Частота", r.swings ? smart(r.f) + " Гц" : "нет"],
+      v.mode === "damped" ? ["Ток сейчас", smart(Math.abs(r.i) * 1000) + " мА"] : ["Наибольший ток", smart(r.Imax * 1000) + " мА"],
+      ["Энергия контура", smart((r.WC + r.WL) * 1000) + " мДж"]],
+    draw: drawCircuit, describe: "Колебательный контур, графики заряда и тока и энергия конденсатора и катушки",
+    formulas: ["T = 2π · √(L · C)", "ν = 1 / T", "C · U² / 2 + L · i² / 2 = const", "Iₘ = Uₘ · √(C / L)", "q = qₘ · cos ωt"],
+    remark: "Заряженный конденсатор разряжается через катушку. Ток растёт не сразу: катушка мешает ему меняться (самоиндукция). "
+      + "Когда конденсатор разрядился, ток наибольший и вся энергия в магнитном поле катушки. Катушка продолжает гнать ток и перезаряжает конденсатор, "
+      + "и всё повторяется в обратную сторону. Ток отстаёт от заряда на четверть периода. Красные точки показывают движение заряда по проводам.",
+    tasks: ["Увеличь ёмкость в 4 раза. Во сколько раз вырос период?", "Найди момент, когда ток наибольший. Какой заряд у конденсатора в этот момент?",
+      "Увеличь напряжение зарядки вдвое. Изменился ли период? Во сколько раз выросла энергия?", "Включи сопротивление. Куда уходит энергия контура?"],
   },
   linza: {
     title: "Линза", section: "Оптика", brief: "Построение изображения",
