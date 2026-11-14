@@ -183,6 +183,106 @@ const FAMILIES = {
   } },
 };
 
+// ---------- физика: графики зависимостей ----------
+// Оси — величины с единицами. Неверные формулы в финале с теми же осями: другие числа и чужие законы (alt)
+const P = (xv, xu, yv, yu, x0, x1, extra = {}) => ({ phys: true, xv, xu, yv, yu, x0, x1, ...extra });
+const k1 = (k, body) => (k === 1 ? body : `${num(k)}${body}`);
+function poly(terms) {
+  const parts = terms.filter(([c]) => c !== 0).map(([c, body], i) => {
+    const a = Math.abs(c), core = body ? (a === 1 ? body : num(a) + body) : num(a);
+    return i === 0 ? (c < 0 ? "−" : "") + core : (c < 0 ? " − " : " + ") + core;
+  });
+  return parts.join("") || "0";
+}
+Object.assign(FAMILIES, {
+  uniform: { make() {
+    const v = pick([1, 2, 3, 4]);
+    return { ...P("t", "с", "s", "м", 0, 6), f: t => v * t, text: `s = ${k1(v, "t")}`,
+      alt: () => [{ f: t => v * t * t / 2, text: `s = ${k1(v / 2, "t²")}` }, { f: t => 4 + v * t, text: `s = 4 + ${k1(v, "t")}` },
+                  { f: t => (t ? 12 * v / t : NaN), text: `s = ${12 * v}/t` }] };
+  } },
+  hooke: { make() {
+    const k = pick([1, 2, 3, 5]);
+    return { ...P("Δx", "см", "F", "Н", 0, 6), f: x => k * x, text: `F = ${k1(k, "Δx")}`,
+      alt: () => [{ f: x => k * x * x / 2, text: `F = ${k1(k / 2, "Δx²")}` }, { f: x => k * x + 3, text: `F = ${k1(k, "Δx")} + 3` },
+                  { f: x => (x ? 6 * k / x : NaN), text: `F = ${6 * k}/Δx` }] };
+  } },
+  liquid: { make() {
+    const k = pick([8, 10]), p0 = pick([0, 100]);
+    return { ...P("h", "м", "p", "кПа", 0, 6), f: h => p0 + k * h, text: `p = ${p0 ? p0 + " + " : ""}${k}h`,
+      alt: () => [{ f: h => p0 + k * h * h / 4, text: `p = ${p0 ? p0 + " + " : ""}${num(k / 4)}h²` },
+                  { f: h => p0 + 60 - k * h, text: `p = ${p0 + 60} − ${k}h` }, { f: h => p0 + 2 * k * Math.sqrt(h) * 2, text: `p = ${p0 ? p0 + " + " : ""}${4 * k}√h` }] };
+  } },
+  ohmU: { make() {
+    const R = pick([2, 3, 4, 6]);
+    return { ...P("U", "В", "I", "А", 0, 12, { xstep: 2 }), f: U => U / R, text: `I = U/${R}`,
+      alt: () => [{ f: U => U * U / (R * 12), text: `I = U²/${R * 12}` }, { f: U => (U ? 12 / (R * U) * 6 : NaN), text: `I = ${72 / R}/U` },
+                  { f: U => 1 + U / R, text: `I = 1 + U/${R}` }] };
+  } },
+  ohmR: { make() {
+    const U = pick([6, 12, 24]);
+    return { ...P("R", "Ом", "I", "А", 0, 12, { xstep: 2 }), f: R => (R ? U / R : NaN), text: `I = ${U}/R`,
+      alt: () => [{ f: R => (R ? U * 2 / (R * R) : NaN), text: `I = ${U * 2}/R²` }, { f: R => R * U / 72, text: `I = R/${72 / U}` }] };
+  } },
+  vt: { make() {
+    const v0 = pick([0, 2, 4]), a = pick([1, 2, -1]);
+    return { ...P("t", "с", "v", "м/с", 0, 6), f: t => v0 + a * t, text: `v = ${poly([[v0, ""], [a, "t"]])}`,
+      alt: () => [{ f: t => v0 + a * t * t / 4, text: `v = ${poly([[v0, ""], [a / 4, "t²"]])}` },
+                  { f: t => v0 + 2 * a + 0 * t, text: `v = ${poly([[v0 + 2 * a, ""]])}` }] };
+  } },
+  xt: { make() {
+    const x0 = pick([0, 5]), v0 = pick([0, 2]), h = pick([1, 0.5, -0.5]);  // h = a/2
+    return { ...P("t", "с", "x", "м", 0, 6), f: t => x0 + v0 * t + h * t * t, text: `x = ${poly([[x0, ""], [v0, "t"], [h, "t²"]])}`,
+      alt: () => [{ f: t => x0 + (v0 + 6 * h) * t, text: `x = ${poly([[x0, ""], [v0 + 6 * h, "t"]])}` },
+                  { f: t => x0 + v0 * t - h * t * t, text: `x = ${poly([[x0, ""], [v0, "t"], [-h, "t²"]])}` }] };
+  } },
+  osc: { make() {
+    const A = pick([2, 3, 4]), T = pick([2, 4]), fn = pick(["cos", "sin"]);
+    const w = 2 * PI / T, arg = T === 2 ? "πt" : "πt/2", g = fn === "cos" ? Math.cos : Math.sin;
+    return { ...P("t", "с", "x", "см", 0, 6), f: t => A * g(w * t), text: `x = ${A}${fn}(${arg})`,
+      alt: () => [{ f: t => A * (fn === "cos" ? Math.sin : Math.cos)(w * t), text: `x = ${A}${fn === "cos" ? "sin" : "cos"}(${arg})` },
+                  { f: t => A * g(w * t * 2), text: `x = ${A}${fn}(${T === 2 ? "2πt" : "πt"})` }] };
+  } },
+  decay: { make() {
+    const N0 = pick([800, 1600]), T = pick([1, 2]);
+    return { ...P("t", "ч", "N", "ядер", 0, 6), f: t => N0 * 2 ** (-t / T), text: `N = ${N0}·2<sup>−t${T === 1 ? "" : "/" + T}</sup>`,
+      alt: () => [{ f: t => N0 - N0 * t / 8, text: `N = ${N0} − ${N0 / 8}t` }, { f: t => N0 / (1 + t / T), text: `N = ${N0}/(1 + t${T === 1 ? "" : "/" + T})` }] };
+  } },
+  gas: { make() {
+    const C = pick([600, 1200]);
+    return { ...P("V", "л", "p", "кПа", 0, 12, { xstep: 2 }), f: V => (V ? C / V : NaN), text: `p = ${C}/V`,
+      alt: () => [{ f: V => (V ? C * 6 / (V * V) : NaN), text: `p = ${C * 6}/V²` }, { f: V => C * V / 60, text: `p = ${C / 60}V` },
+                  { f: V => C / 6 - C / 120 * V, text: `p = ${C / 6} − ${C / 120}V` }] };
+  } },
+  kinetic: { make() {
+    const m = pick([2, 4]);
+    return { ...P("v", "м/с", "Eк", "Дж", 0, 6), f: v => m * v * v / 2, text: `Eк = ${k1(m / 2, "v²")}`,
+      alt: () => [{ f: v => m * v * 3, text: `Eк = ${3 * m}v` }, { f: v => m * v ** 3 / 12, text: `Eк = v³/${12 / m}` }] };
+  } },
+  pendulum: { make() {
+    const k = pick([1, 2, 4]);  // T = 2π√(l/g): при g = π² это 2√l, при g = 4π² это √l, при g = π²/4 это 4√l
+    return { ...P("l", "м", "T", "с", 0, 12, { xstep: 2 }), f: l => k * Math.sqrt(l), text: `T = ${k1(k, "√l")}`,
+      alt: () => [{ f: l => k * l / 2, text: `T = ${k1(k / 2, "l")}` }, { f: l => k * l * l / 24, text: `T = l²/${24 / k}` }] };
+  } },
+});
+
+const PHYS_LEVELS = [
+  { id: "p-uni", title: "Равномерное движение: s(t)", grade: 7, fams: ["uniform"] },
+  { id: "p-hooke", title: "Сила упругости: F(Δx)", grade: 7, fams: ["hooke"] },
+  { id: "p-liq", title: "Давление жидкости: p(h)", grade: 7, fams: ["liquid"] },
+  { id: "p-ohmu", title: "Закон Ома: I(U)", grade: 8, fams: ["ohmU"] },
+  { id: "p-ohmr", title: "Закон Ома: I(R)", grade: 8, fams: ["ohmR"] },
+  { id: "p-vt", title: "Скорость при разгоне: v(t)", grade: 9, fams: ["vt"] },
+  { id: "p-xt", title: "Координата при разгоне: x(t)", grade: 9, fams: ["xt"] },
+  { id: "p-osc", title: "Колебания: x(t)", grade: 9, fams: ["osc"] },
+  { id: "p-decay", title: "Радиоактивный распад: N(t)", grade: 9, fams: ["decay"] },
+  { id: "p-mixo", title: "Всё вперемешку: ОГЭ", grade: 9, fams: ["uniform", "hooke", "liquid", "ohmU", "ohmR", "vt", "xt", "osc", "decay"] },
+  { id: "p-gas", title: "Газ при T = const: p(V)", grade: 10, fams: ["gas"] },
+  { id: "p-ek", title: "Кинетическая энергия: Eк(v)", grade: 10, fams: ["kinetic"] },
+  { id: "p-pend", title: "Период маятника: T(l)", grade: 11, fams: ["pendulum"] },
+  { id: "p-mixe", title: "Всё вперемешку: ЕГЭ", grade: 11, fams: ["uniform", "hooke", "liquid", "ohmU", "ohmR", "vt", "xt", "osc", "decay", "gas", "kinetic", "pendulum"] },
+];
+
 // Уровни по классу: в 7 только прямая, к ЕГЭ все функции
 const LEVELS = [
   { id: "line", title: "Прямая", grade: 7, fams: ["linear"] },
@@ -196,11 +296,12 @@ const LEVELS = [
   { id: "log", title: "Логарифм", grade: 10, fams: ["log"] },
   { id: "trig", title: "Синус и косинус", grade: 10, fams: ["trig"] },
   { id: "cub", title: "Кубическая", grade: 11, fams: ["cubic"] },
-  { id: "mixe", title: "Всё вперемешку: ЕГЭ", grade: 11, fams: Object.keys(FAMILIES) },
+  { id: "mixe", title: "Всё вперемешку: ЕГЭ", grade: 11, fams: ["linear", "parabola0", "parabola", "hyperbola", "sqrt0", "abs", "exp", "log", "trig", "cubic"] },
 ];
 const MODE_GRADE = { 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, oge: 9, ege: 11, ege_base: 11 };
 const grade = MODE_GRADE[new URLSearchParams(location.search).get("mode")] ?? 11;
-const levels = LEVELS.filter(l => l.grade <= grade);
+const PHYS = new URLSearchParams(location.search).get("s") === "phys";  // физика: графики зависимостей
+const levels = (PHYS ? PHYS_LEVELS : LEVELS).filter(l => l.grade <= grade);
 
 // ---------- звёзды: только в этом браузере ----------
 const KEY = "graphgame:stars";
@@ -241,7 +342,21 @@ function sample(fn, a, b, n = 60) {
 }
 
 // Окно по y: видно всю функцию, но не дальше ±10, чтобы гипербола и логарифм не сжимали картинку
+function niceStep(span, lines = 6) {
+  const raw = span / lines, p = 10 ** Math.floor(Math.log10(raw)), m = raw / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+}
+
+function physRange(fn) {
+  // Физика: от нуля (или минимума) до верха без хвоста у асимптоты, края по шагу сетки
+  const ys = sample(fn, fn.x0, fn.x1, 240).map(p => p[1]).sort((a, b) => a - b);
+  const top = Math.min(ys[ys.length - 1], ys[Math.floor(ys.length * 0.9)] * 1.3), bottom = Math.min(0, ys[0]);
+  const step = niceStep(top - bottom);
+  return [Math.floor(bottom / step) * step, Math.ceil(top / step) * step + step, step];
+}
+
 function yRange(fn) {
+  if (fn.phys) return physRange(fn).slice(0, 2);
   // Возле асимптоты значения огромные: окно берём по 90% точек, иначе гипербола прижмётся к оси
   const ys = sample(fn, fn.x0, fn.x1, 240).map(p => p[1]);
   const abs = ys.map(Math.abs).sort((a, b) => a - b), cap = Math.max(2, abs[Math.floor(abs.length * 0.9)] * 1.2);
@@ -251,9 +366,9 @@ function yRange(fn) {
 
 function distractors(fn, level) {
   // Похожие функции: сильнее всего похожи на видимых крайних полосах, но отличаются в спрятанной середине
-  const pool = [];
+  const pool = fn.phys ? fn.alt() : [];
   for (let i = 0; i < 80; i++) {
-    const fam = i < 60 ? fn.fam : pick(level.fams);
+    const fam = i < 60 || fn.phys ? fn.fam : pick(level.fams);
     const g = FAMILIES[fam].make();
     g.fam = fam;
     pool.push(g);
@@ -273,7 +388,11 @@ function distractors(fn, level) {
       if (visible(x)) edge += d;
     }
     return { g, edge: edge + Math.random() * 2, total };
-  }).filter(s => s.total > 0.75).sort((p, q) => p.edge - q.edge);
+  }).filter(s => s.total > (fn.phys ? (hi - lo) * 0.06 : 0.75)).sort((p, q) => p.edge - q.edge);
+  if (fn.phys) {
+    const law = scored.find(s => fn.alt && !s.g.fam);
+    if (law) { seen.add(law.g.text); out.push(law.g); }
+  }
   for (const s of scored) {
     if (seen.has(s.g.text)) continue;
     seen.add(s.g.text); out.push(s.g);
@@ -295,13 +414,21 @@ function question(fn, a, b, want = "") {
     if (kind === "value") {
       const xs = [];
       if (fn.pi) for (let k = 0; k <= 12; k++) { const x = k * PI / 6; if (x > a + 1e-9 && x < b - 1e-9) xs.push(x); }
-      else for (let x = Math.ceil(a * 2) / 2; x <= b + 1e-9; x += 0.5) if (x > a + 1e-9 && x < b - 1e-9) xs.push(x);
-      const good = xs.filter(x => nice(fn.f(x)) && Math.abs(fn.f(x)) <= 10);
+      else {
+        // Граница между двумя закрытыми полосами тоже годится: её не видно. Граница с открытой крайней полосой нет
+        const step = (fn.x1 - fn.x0) / STRIPS, lo = fn.x0 + step + 1e-9, hi = fn.x1 - step - 1e-9;
+        for (let x = Math.ceil(a * 2) / 2; x <= b + 1e-9; x += 0.5) if (x > a + 1e-9 && x < b - 1e-9 || (x > lo && x < hi)) xs.push(x);
+      }
+      const good = xs.filter(x => nice(fn.f(x)) && (fn.phys || Math.abs(fn.f(x)) <= 10));
       if (!good.length) continue;
       const x = pick(good), y = Math.round(fn.f(x) * 2) / 2;
-      const wrong = shuffle([1, -1, 2, -2, 0.5, -0.5, 3]).map(d => y + d).filter(v => v !== y).slice(0, 3);
-      return { text: `Чему равно y при x = ${fn.pi ? piLabel(x) : num(x)}?`, opts: shuffle([num(y), ...wrong.map(num)]), right: num(y),
-               why: `y(${fn.pi ? piLabel(x) : num(x)}) = ${num(y)}` };
+      const unit = fn.phys ? Math.max(0.5, niceStep(Math.abs(y) || 1, 8)) : 1;  // у 400 кПа соседи 350 и 450, а не 399
+      const wrong = shuffle(fn.phys ? [1, -1, 2, -2, 3] : [1, -1, 2, -2, 0.5, -0.5, 3]).map(d => y + d * unit).filter(v => v !== y && (!fn.phys || v >= 0 || y < 0)).slice(0, 3);
+      const xs_ = fn.pi ? piLabel(x) : num(x);
+      if (fn.phys) return { text: `Чему равно ${fn.yv} (в ${fn.yu}) при ${fn.xv} = ${xs_} ${fn.xu}?`, opts: shuffle([num(y), ...wrong.map(num)]),
+                            right: num(y), why: `При ${fn.xv} = ${xs_} ${fn.xu} значение ${fn.yv} = ${num(y)} ${fn.yu}.` };
+      return { text: `Чему равно y при x = ${xs_}?`, opts: shuffle([num(y), ...wrong.map(num)]), right: num(y),
+               why: `y(${xs_}) = ${num(y)}` };
     }
     const pts = sample(fn, a, b, 80);
     if (pts.length < 10) continue;
@@ -315,13 +442,17 @@ function question(fn, a, b, want = "") {
       else if (d[first] < 0 && d[last] > 0) right = "сначала убывает, потом возрастает";
       else if (d[first] > 0 && d[last] < 0) right = "сначала возрастает, потом убывает";
       else continue;  // больше одного поворота на полосе: вопрос был бы нечестным
-      return { text: "Как ведёт себя функция на этой полосе?", right, why: `На полосе функция ${right}.`,
+      return { text: fn.phys ? `Как меняется ${fn.yv} на этой полосе, когда ${fn.xv} растёт?` : "Как ведёт себя функция на этой полосе?",
+               right, why: `На полосе ${fn.phys ? fn.yv : "функция"} ${right}.`,
                opts: ["возрастает", "убывает", "сначала убывает, потом возрастает", "сначала возрастает, потом убывает"] };
     }
+    const all = sample(fn, fn.x0, fn.x1, 120).map(p => p[1]);
+    if (all.every(y => y >= -1e-9) || all.every(y => y <= 1e-9)) continue;
     const ys = pts.map(p => p[1]);
     const right = ys.every(y => y > 1e-9) ? "выше оси x" : ys.every(y => y < -1e-9) ? "ниже оси x" : "пересекает или касается оси x";
-    return { text: "Где проходит график на этой полосе?", right, why: `На полосе график ${right}.`,
-             opts: ["выше оси x", "ниже оси x", "пересекает или касается оси x"] };
+    const axis = fn.phys ? `оси ${fn.xv}` : "оси x", say = r => r.replace("оси x", axis);
+    return { text: "Где проходит график на этой полосе?", right: say(right), why: `На полосе график ${say(right)}.`,
+             opts: ["выше оси x", "ниже оси x", "пересекает или касается оси x"].map(say) };
   }
   return null;
 }
@@ -332,7 +463,7 @@ function start(level) {
     const fam = pick(level.fams);
     fn = FAMILIES[fam].make(); fn.fam = fam;
     const step = (fn.x1 - fn.x0) / STRIPS;
-    const wants = shuffle(["value", "value", "trend", "sign"]);  // вопросы разные, а не четыре одинаковых
+    const wants = shuffle(fn.phys ? ["value", "value", "value", "trend"] : ["value", "value", "trend", "sign"]);  // вопросы разные, а не четыре одинаковых
     cards = [1, 2, 3, 4].map((i, k) => ({ i, q: question(fn, fn.x0 + i * step, fn.x0 + (i + 1) * step, wants[k]), state: "closed" }));
     if (cards.every(c => c.q)) break;
   }
@@ -351,11 +482,12 @@ function draw() {
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   let s = "";
   // клетки: по единице, у синуса по π/6
-  const xstep = fn.pi ? PI / 6 : (fn.x1 - fn.x0 > 8 ? 2 : 1), ystep = hi - lo > 12 ? 2 : 1;
+  const xstep = fn.pi ? PI / 6 : fn.xstep || (fn.x1 - fn.x0 > 8 ? 2 : 1), ystep = fn.phys ? physRange(fn)[2] : hi - lo > 12 ? 2 : 1;
   for (let x = Math.ceil(fn.x0 / xstep) * xstep; x <= fn.x1 + 1e-9; x += xstep) s += `<line x1="${X(x)}" y1="${PAD}" x2="${X(x)}" y2="${H - PAD}" stroke="${css("--grid")}" stroke-width="1"/>`;
   for (let y = Math.ceil(lo / ystep) * ystep; y <= hi; y += ystep) s += `<line x1="${PAD}" y1="${Y(y)}" x2="${W - PAD}" y2="${Y(y)}" stroke="${css("--grid")}" stroke-width="1"/>`;
   // оси и подписи
   if (fn.x0 <= 0 && fn.x1 >= 0) s += `<line x1="${X(0)}" y1="${PAD}" x2="${X(0)}" y2="${H - PAD}" stroke="${css("--ink")}" stroke-width="1.6"/>`;
+  if (fn.phys) s += `<line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H - PAD}" stroke="${css("--ink")}" stroke-width="1.6"/>`;
   if (lo <= 0 && hi >= 0) s += `<line x1="${PAD}" y1="${Y(0)}" x2="${W - PAD}" y2="${Y(0)}" stroke="${css("--ink")}" stroke-width="1.6"/>`;
   let labels = "";  // подписи рисуются поверх карточек: по ним ученик читает x и y
   const ty = lo <= 0 && hi >= 0 ? Y(0) + 22 : H - 6;
@@ -363,10 +495,14 @@ function draw() {
     if (Math.abs(x) < 1e-9 || (fn.pi && Math.round(x / (PI / 6)) % 3)) continue;
     labels += `<text x="${X(x)}" y="${ty}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" text-anchor="middle" fill="${css("--muted")}" font-family="${css("--mono")}">${fn.pi ? piLabel(x) : num(x)}</text>`;
   }
-  const tx = fn.x0 <= 0 && fn.x1 >= 0 ? X(0) - 6 : PAD + 22;
+  const tx = fn.phys ? PAD + 4 : fn.x0 <= 0 && fn.x1 >= 0 ? X(0) - 6 : PAD + 22;
   for (let y = Math.ceil(lo / ystep) * ystep; y <= hi; y += ystep) {
     if (y === 0) continue;
-    labels += `<text x="${tx}" y="${Y(y) + 7}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" text-anchor="end" fill="${css("--muted")}" font-family="${css("--mono")}">${num(y)}</text>`;
+    labels += `<text x="${tx}" y="${Y(y) + 7}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" text-anchor="${fn.phys ? "start" : "end"}" fill="${css("--muted")}" font-family="${css("--mono")}">${num(y)}</text>`;
+  }
+  if (fn.phys) {  // названия осей с единицами
+    const name = (t, x, y, anchor) => `<text x="${x}" y="${y}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" font-weight="600" text-anchor="${anchor}" fill="${css("--ink")}" font-family="${css("--body")}">${t}</text>`;
+    labels += name(`${fn.xv}, ${fn.xu}`, W - PAD - 4, H - PAD - 10, "end") + name(`${fn.yv}, ${fn.yu}`, PAD + 70, PAD - 8, "start");
   }
   // кривая с разрывами: гипербола, корень и логарифм определены не везде
   let path = "", pen = false;
@@ -424,7 +560,7 @@ function ask(k) {
 }
 
 function finale(note = "") {
-  $("panel").innerHTML = `${typeof note === "string" ? note : ""}<h2>Какая функция спряталась?</h2><div class="opts">${
+  $("panel").innerHTML = `${typeof note === "string" ? note : ""}<h2>${round.fn.phys ? "Какой формулой описывается график?" : "Какая функция спряталась?"}</h2><div class="opts">${
     round.options.map((g, i) => `<button type="button" class="formula" data-i="${i}">${g.text}</button>`).join("")}</div>`;
   $("panel").querySelectorAll(".opts button").forEach(b => b.onclick = () => {
     const chosen = round.options[+b.dataset.i], ok = chosen === round.fn;
@@ -446,6 +582,12 @@ function finale(note = "") {
   });
 }
 
+if (PHYS) {  // физика: та же игра на графиках зависимостей
+  document.title = "Угадай зависимость";
+  document.querySelector("#home h1").textContent = "Угадай зависимость";
+  document.querySelector("#home .lead").textContent = "На графике зависимость одной физической величины от другой, средние полосы спрятаны под карточками. "
+    + "Отвечай на вопросы карточек, открывай график и угадай, какой формулой он описывается.";
+}
 showLevels();
 </script>
 </body>
