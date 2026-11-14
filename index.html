@@ -515,6 +515,113 @@ function drawCircuit(w, h, v, r) {
   if (r.slow > 1) label(`замедлено в ${Math.round(r.slow).toLocaleString("ru")} раз`, gx, h - 6, color("--muted"), 10);
 }
 
+// ---------- блоки ----------
+
+const BLOCK_TEXT = {
+  fixed: "Выигрыша в силе нет, меняется направление",
+  moving: "Сила вдвое меньше, путь вдвое больше",
+  both: "Сила вдвое меньше, а тянем вниз",
+};
+
+function blocks(v, t) {
+  const g = v.g;
+  if (v.kind === "atwood") {
+    const M = v.m1 + v.m2, a = (v.m1 - v.m2) * g / M, T = 2 * v.m1 * v.m2 * g / M;
+    const tau = a ? Math.sqrt(2 * v.ha / Math.abs(a)) : 0, fast = Math.max(1, tau / 6);  // долгий путь показываем быстрее
+    const time = a ? Math.min((t * fast) % (tau + fast), tau) : 0;  // доехали, секунду стоим, снова с начала
+    return { atwood: true, a, T, tau, end: Math.abs(a) * tau, share: a ? Math.sign(a) * Math.abs(a) * time * time / 2 / v.ha : 0, fast };
+  }
+  const n = v.kind === "fixed" ? 1 : 2, mb = n === 1 ? 0 : v.mb, F = (v.m + mb) * g / n, s = n * v.hh;
+  return { n, F, s, A: F * s, useful: v.m * g * v.hh, eta: v.m / (v.m + mb), share: 0.5 - 0.5 * Math.cos(2 * Math.PI * t / 5) };
+}
+
+function pulley(x, y, R) {
+  ctx.fillStyle = color("--sheet"); ctx.strokeStyle = color("--ink"); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, R * 0.6, 0, 7); ctx.stroke();
+  dot(x, y, 3, color("--ink"));
+}
+
+function weight(x, top, size, text) {
+  ctx.fillStyle = color("--solid");
+  ctx.fillRect(x - size / 2, top, size, size);
+  label(text, x - size / 2 - 6 - text.length * 7, top + size / 2 + 4, color("--muted"), 12);
+}
+
+// Отметка пройденного пути: пунктир на старте и скобка с подписью
+function path(x, from, to, text) {
+  if (Math.abs(to - from) < 4) return;
+  line(x - 10, from, x + 10, from, color("--muted"), 1, [3, 3]);
+  line(x, from, x, to, color("--muted"), 1);
+  line(x - 4, to, x + 4, to, color("--muted"), 1);
+  label(text, x + 6, (from + to) / 2 + 4, color("--muted"), 12);
+}
+
+function drawBlocks(w, h, v, r) {
+  paper(w, h);
+  const ink = color("--ink"), top = 12, floor = h - 22, R = Math.max(10, Math.min(20, h * 0.07)), size = Math.max(18, Math.min(34, h * 0.13));
+  const A = h * 0.16, cx = w * 0.42, cy = top + R + 8;
+  line(0, top, w, top, ink, 3);
+  for (let x = 4; x < w; x += 14) line(x, top, x + 7, top - 7, ink, 1);
+  const hmax = +$("r_hh").max, part = 0.35 + 0.65 * Math.min(1, v.hh / hmax);
+  const rope = (x1, y1, x2, y2) => line(x1, y1, x2, y2, ink, 1.6);
+  const arc = (x, y, a, b) => { ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, R, a, b); ctx.stroke(); };
+  if (r.atwood) {
+    const low = cy + R + 8, high = floor - A - size, L = (high - low) / 2, mid = low + L, d = r.share * L;
+    const g1 = v.m1 * v.g, g2 = v.m2 * v.g, k = A / Math.max(g1, g2, r.T);
+    rope(cx, top, cx, cy); arc(cx, cy, Math.PI, 0);
+    [[cx - R, mid + d, v.m1, g1, "m₁"], [cx + R, mid - d, v.m2, g2, "m₂"]].forEach(([x, y, , gr, name], i) => {
+      rope(x, cy, x, y);
+      weight(x, y, size, i ? "" : name);
+      if (i) label(name, x + size / 2 + 6, y + size / 2 + 4, color("--muted"), 12);
+      arrow(x, y + size / 2, x, y + size / 2 + gr * k, color("--hit"), 3);
+      const side = i ? 1 : -1;
+      arrow(x + side * (size / 2 + 4), y + size / 2, x + side * (size / 2 + 4), y + size / 2 - r.T * k, color("--good"), 2);
+    });
+    pulley(cx, cy, R);
+    label(r.a ? `тяжёлый опускается, a = ${smart(Math.abs(r.a))} м/с²` : "грузы равны: стоят на месте", 10, h - 7, ink, 12);
+    label("— mg", w - 74, top + 22, color("--hit"), 11); label("— T", w - 74, top + 38, color("--good"), 11);
+    return;
+  }
+  const total = (v.m + (r.n === 1 ? 0 : v.mb)) * v.g, k = A / Math.max(total, r.F), p = r.share;
+  if (v.kind === "fixed") {
+    const loadTop0 = floor - A - size, hand0 = cy + R + 10;
+    const L = Math.max(8, Math.min(loadTop0 - cy - R - 8, floor - A - hand0)) * part;
+    const loadTop = loadTop0 - L * p, hand = hand0 + L * p;
+    rope(cx, top, cx, cy); arc(cx, cy, Math.PI, 0);
+    rope(cx - R, cy, cx - R, loadTop); rope(cx + R, cy, cx + R, hand);
+    pulley(cx, cy, R);
+    weight(cx - R, loadTop, size, "");
+    arrow(cx - R, loadTop + size / 2, cx - R, loadTop + size / 2 + total * k, color("--hit"), 3);
+    dot(cx + R, hand, 5, color("--accent"));
+    arrow(cx + R + 12, hand, cx + R + 12, hand + r.F * k, color("--accent"), 3);
+    path(cx - R - size / 2 - 12, loadTop0, loadTop, "h");
+    path(cx + R + 30, hand0, hand, "s = h");
+  } else {
+    // Подвижный блок висит на двух кусках верёвки: левый привязан к потолку, правый тянем мы
+    const lowest = floor - A - size / 2 - size / 2 - R - 6, fx = cx + 2 * R, both = v.kind === "both";
+    const hand0 = both ? cy + 20 : lowest - R - 10;
+    const L = Math.max(6, both ? Math.min((floor - A - hand0) / 2, lowest - cy - 2 * R - 6) : (hand0 - top - 10) / 2) * part;
+    const py = lowest - L * p, hand = both ? hand0 + 2 * L * p : hand0 - 2 * L * p, hx = both ? fx + R : cx + R;
+    rope(cx - R, top, cx - R, py); arc(cx, py, 0, Math.PI);
+    if (both) { rope(cx + R, py, cx + R, cy); rope(fx, top, fx, cy); arc(fx, cy, Math.PI, 0); rope(hx, cy, hx, hand); pulley(fx, cy, R); }
+    else rope(cx + R, py, cx + R, hand);
+    rope(cx, py, cx, py + R + 6);
+    pulley(cx, py, R);
+    const loadTop = py + R + 6;
+    weight(cx, loadTop, size, "");
+    arrow(cx, loadTop + size / 2, cx, loadTop + size / 2 + total * k, color("--hit"), 3);
+    dot(hx, hand, 5, color("--accent"));
+    const tail = both ? hand : hand + r.F * k, tip = both ? hand + r.F * k : hand;  // тянем вверх — стрелка кончается у руки
+    arrow(hx + 12, tail, hx + 12, tip, color("--accent"), 3);
+    path(cx - size / 2 - 14, lowest + R + 6, loadTop, "h");
+    path(hx + 30, hand0, hand, "s = 2h");
+  }
+  label(`${r.n === 2 && v.mb ? "(m + mбл)g" : "mg"} = ${smart(total)} Н`, 10, top + 22, color("--hit"), 12);
+  label(`F = ${smart(r.F)} Н`, 10, top + 40, color("--accent"), 12);
+  label(BLOCK_TEXT[v.kind], 10, h - 7, ink, 12);
+}
+
 // ---------- линза ----------
 
 function lens(v) {
@@ -688,6 +795,36 @@ const SIMS = {
     remark: "Считаем g = 10 м/с². Плотности: дерево 400, лёд 900, алюминий 2700, железо 7800, свинец 11 350 кг/м³.",
     tasks: ["Какая часть льда с плотностью 900 кг/м³ погружена в воду?", "Опусти железо с плотностью 7800 кг/м³ в воду, а затем в ртуть. Что изменилось?", "Найди плотность, при которой тело лежит на границе между плаванием и утоплением."],
   },
+  bloki: {
+    title: "Блоки", section: "Механика", brief: "Подвижный, неподвижный и машина Атвуда", live: true,
+    fields: [
+      { id: "m", label: "Масса груза", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 10, when: v => v.kind !== "atwood" },
+      { id: "m1", label: "Масса левого груза m₁", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 10, when: v => v.kind === "atwood" },
+      { id: "m2", label: "Масса правого груза m₂", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 6, when: v => v.kind === "atwood" },
+      { id: "mb", label: "Масса подвижного блока", unit: "кг", min: 0, max: 5, step: 0.1, value: 0, when: v => v.kind === "moving" || v.kind === "both" },
+      { id: "hh", label: "На сколько поднимаем груз", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind !== "atwood" },
+      { id: "ha", label: "Путь, который проходят грузы", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind === "atwood" },
+    ],
+    selects: [
+      { id: "kind", label: "Какой блок", first: true, options: [["fixed", "Неподвижный"], ["moving", "Подвижный, тянем вверх"], ["both", "Подвижный и неподвижный, тянем вниз"], ["atwood", "Два груза на блоке (машина Атвуда)"]] },
+      { id: "g", label: "Где находится", options: PLANETS, number: true },
+    ],
+    compute: blocks,
+    reads: r => r.atwood
+      ? [["Ускорение грузов", smart(Math.abs(r.a)) + " м/с²"], ["Натяжение нити", smart(r.T) + " Н"],
+         ["Время на путь", r.a ? smart(r.tau) + " с" : "стоят"], ["Скорость в конце", r.a ? smart(r.end) + " м/с" : "0 м/с"]]
+      : [["Сила тяги", smart(r.F) + " Н"], ["Вытянули верёвки", smart(r.s) + " м"], ["Работа A = F · s", smart(r.A) + " Дж"], ["КПД", num(r.eta * 100, 0) + "%"]],
+    draw: drawBlocks, describe: "Груз на блоках и силы, которые на него действуют",
+    formulas: ["F = mg — неподвижный блок", "F = (m + mбл) · g / 2 — подвижный блок", "s = 2h — подвижный блок",
+      "η = Aпол / Aзатр = mgh / (F · s)", "a = (m₁ − m₂) · g / (m₁ + m₂)", "T = 2m₁m₂g / (m₁ + m₂)"],
+    remark: "Верёвка невесомая и не растягивается, трения в осях нет. Неподвижный блок выигрыша в силе не даёт, только меняет её направление. "
+      + "Подвижный блок даёт выигрыш в силе в 2 раза, но верёвку приходится вытянуть вдвое длиннее, поэтому работа та же: "
+      + "это «золотое правило» механики, выигрыша в работе не даёт ни один механизм. Если блок сам что-то весит, часть работы уходит на его подъём и КПД меньше 100%.",
+    tasks: ["Подними один и тот же груз неподвижным и подвижным блоком. Во сколько раз отличается сила?",
+      "Подними груз на 2 м подвижным блоком. Сколько метров верёвки ты вытянул? Сравни работу с mgh.",
+      "Дай подвижному блоку массу 1 кг. Как изменился КПД?",
+      "В машине Атвуда сделай грузы равными, а потом один втрое тяжелее. Как изменилось ускорение?"],
+  },
   gaz: {
     title: "Изопроцессы в газе", section: "Молекулярная физика", brief: "Давление, объём и температура", live: true,
     fields: [
@@ -797,7 +934,7 @@ const SIMS = {
 // Масштаб: те же опыты, но пределы ползунков в 10 и 100 раз больше. Вписанное большое число включает его само
 const GROW = {
   mayatnik: ["l", "m", "k", "x"], arhimed: ["rho", "vol"], gaz: ["nu", "T", "V", "p"], om: ["emf", "inner", "r1", "r2"],
-  linza: ["F", "d", "h"], raspad: ["n", "half"],
+  linza: ["F", "d", "h"], raspad: ["n", "half"], bloki: ["m", "m1", "m2", "mb", "hh", "ha"],
 };
 Object.entries(GROW).forEach(([key, ids]) => {
   const sim = SIMS[key], fields = sim.fields.filter(f => ids.includes(f.id));
