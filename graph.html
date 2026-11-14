@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: открывай кусочки графика, отвечая на вопросы, и угадай функцию.">
+<title>Угадай график</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и геометрии: лист миллиметровки. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --grid: #f2c7a0; --grid-bold: #e9a56c; --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f;
+  --star: #e8a300;
+  --c1: #f7c6d9; --c2: #c9def7; --c3: #fbe3a6; --c4: #cdeccf;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --grid: #3d3324; --grid-bold: #6b5230; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --star: #ffc93c; --c1: #5a2f43; --c2: #2a4566; --c3: #5c4a1c; --c4: #24503a;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --grid: #3d3324; --grid-bold: #6b5230; --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --star: #ffc93c; --c1: #5a2f43; --c2: #2a4566; --c3: #5c4a1c; --c4: #24503a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 16px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: 0.45; cursor: default; }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.level { display: grid; gap: 2px; text-align: left; border-color: var(--line); color: var(--ink); padding: 10px 12px; }
+.level small { color: var(--muted); font-weight: 400; font-size: 13px; }
+.level .stars { font-size: 14px; letter-spacing: 1px; }
+.level[aria-disabled="true"] { opacity: 0.5; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stars { color: var(--star); font-size: 20px; letter-spacing: 2px; white-space: nowrap; }
+.stars .off { color: var(--line); }
+.back { background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; }
+svg.plot { display: block; width: 100%; height: auto; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; user-select: none; -webkit-user-select: none; }
+.card { cursor: pointer; }
+.card rect { transition: opacity 0.4s; }
+.card text { font: 600 30px var(--body); fill: var(--ink); }
+.card.done { pointer-events: none; }
+.q { display: grid; gap: 10px; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.opts button { color: var(--ink); border-color: var(--line); font-weight: 500; }
+.opts button.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); }
+.opts button.wrong { border-color: var(--hit); background: color-mix(in srgb, var(--hit) 15%, transparent); }
+.formula { font: 500 17px var(--mono); }
+.msg { font-weight: 600; }
+.msg.ok { color: var(--good); }
+.msg.bad { color: var(--hit); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row button { flex: 1 1 140px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section id="home" class="wrap" style="padding:0">
+    <header>
+      <h1>Угадай график</h1>
+      <p class="lead">График функции разрезан на 6 полос. Крайние видно сразу, средние спрятаны под карточками.
+        Ответь на вопрос карточки — полоса откроется. В конце угадай, какая функция спряталась.</p>
+    </header>
+    <div class="sheet">
+      <h2>Как получить звёзды</h2>
+      <p class="note">За каждую открытую карточку и за верно названную функцию — звезда, всего до 5 за раунд.
+        Неверный ответ оставляет полосу закрытой. Следующий уровень открывается, когда на предыдущем есть хотя бы 3 звезды.</p>
+    </div>
+    <div class="levels" id="levels"></div>
+    <p class="note">Звёзды хранятся в этом браузере. Опыт и стрик в боте за игру пока не начисляются.</p>
+  </section>
+
+  <section id="game" class="wrap" style="padding:0" hidden>
+    <div class="top">
+      <button class="back" id="back" type="button">← Уровни</button>
+      <span class="stars" id="stars" aria-label="Звёзды за раунд"></span>
+    </div>
+    <h1 id="title"></h1>
+    <svg class="plot" id="plot" viewBox="0 0 600 400" role="img" aria-label="График функции, часть закрыта карточками"></svg>
+    <div class="sheet q" id="panel" aria-live="polite"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+function telegram(event, data = {}) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), "*");
+  } catch {}
+}
+telegram("web_app_ready");
+telegram("web_app_expand");
+
+const $ = id => document.getElementById(id);
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const shuffle = list => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const num = x => {  // 0,5 и −2 как в тетради
+  const r = Math.round(x * 100) / 100;
+  return (r < 0 ? "−" : "") + String(Math.abs(r)).replace(".", ",");
+};
+const nice = y => Number.isFinite(y) && Math.abs(y * 2 - Math.round(y * 2)) < 1e-9;  // целое или половина
+
+// ---------- запись формул ----------
+function coef(k, body) {  // 1·x → x, −1·x → −x
+  if (k === 1) return body;
+  if (k === -1) return "−" + body;
+  return num(k) + body;
+}
+function shift(m) { return m === 0 ? "x" : m > 0 ? `(x − ${num(m)})` : `(x + ${num(-m)})`; }
+function plus(n) { return n === 0 ? "" : n > 0 ? ` + ${num(n)}` : ` − ${num(-n)}`; }
+function inner(m) { return m === 0 ? "x" : m > 0 ? `x − ${num(m)}` : `x + ${num(-m)}`; }
+
+// ---------- семейства функций ----------
+// Каждое даёт функцию со своим окном: 6 полос одинаковой ширины, крайние видны сразу
+const PI = Math.PI;
+const FAMILIES = {
+  linear: { make() {
+    const k = pick([-2, -1, -0.5, 0.5, 1, 2]), b = pick([-3, -2, -1, 0, 1, 2, 3]);
+    return { f: x => k * x + b, text: `y = ${coef(k, "x")}${plus(b)}`, x0: -6, x1: 6 };
+  } },
+  parabola0: { make() {
+    const a = pick([1, -1, 0.5, -0.5]), n = pick([-3, -2, -1, 0, 1, 2, 3]);
+    return { f: x => a * x * x + n, text: `y = ${coef(a, "x²")}${plus(n)}`, x0: -3, x1: 3 };
+  } },
+  parabola: { make() {
+    const a = pick([1, -1, 0.5, -0.5]), m = pick([-2, -1, 1, 2]), n = pick([-3, -2, -1, 0, 1, 2, 3]);
+    return { f: x => a * (x - m) ** 2 + n, text: `y = ${coef(a, shift(m) + "²")}${plus(n)}`, x0: m - 3, x1: m + 3 };
+  } },
+  hyperbola: { make() {
+    const k = pick([-6, -4, -2, -1, 1, 2, 4, 6]);
+    return { f: x => (x === 0 ? NaN : k / x), text: `y = ${k < 0 ? "−" : ""}${Math.abs(k)}/x`, x0: -6, x1: 6 };
+  } },
+  sqrt0: { make() {
+    const a = pick([1, 2, -1]), n = pick([-2, -1, 0, 1, 2]);
+    return { f: x => (x < 0 ? NaN : a * Math.sqrt(x) + n), text: `y = ${coef(a, "√x")}${plus(n)}`, x0: 0, x1: 12 };
+  } },
+  abs: { make() {
+    const a = pick([1, -1, 2, 0.5]), m = pick([-2, -1, 0, 1, 2]), n = pick([-2, -1, 0, 1, 2]);
+    return { f: x => a * Math.abs(x - m) + n, text: `y = ${coef(a, `|${inner(m)}|`)}${plus(n)}`, x0: m - 3, x1: m + 3 };
+  } },
+  exp: { make() {
+    const b = pick([2, 0.5]), m = pick([-1, 0, 1]), n = pick([-2, -1, 0, 1]);
+    const base = b === 2 ? "2" : "(½)";
+    return { f: x => b ** (x - m) + n, text: `y = ${base}<sup>${inner(m)}</sup>${plus(n)}`, x0: -3, x1: 3 };
+  } },
+  log: { make() {
+    const b = pick([2, 0.5]), m = pick([-2, -1, 0]), n = pick([-1, 0, 1]);
+    const base = b === 2 ? "2" : "½";
+    return { f: x => (x <= m ? NaN : Math.log(x - m) / Math.log(b) + n), text: `y = log<sub>${base}</sub>(${inner(m)})${plus(n)}`, x0: m, x1: m + 6 };
+  } },
+  trig: { make() {
+    const fn = pick(["sin", "cos"]), a = pick([1, 2, -1]), n = pick([-1, 0, 1]);
+    const g = fn === "sin" ? Math.sin : Math.cos;
+    return { f: x => a * g(x) + n, text: `y = ${coef(a, fn + " x")}${plus(n)}`, x0: 0, x1: 2 * PI, pi: true };
+  } },
+  cubic: { make() {
+    const s = pick([1, -1]), kind = pick(["3x", "x", "0"]), n = pick([-2, -1, 0, 1, 2]);
+    const c = { "3x": 3, x: 1, 0: 0 }[kind];
+    const body = c ? `x³ − ${c === 1 ? "" : c}x` : "x³";
+    return { f: x => s * (x ** 3 - c * x) + n, text: `y = ${s < 0 ? `−(${body})` : body}${plus(n)}`.replace("−(x³)", "−x³"), x0: -3, x1: 3 };
+  } },
+};
+
+// Уровни по классу: в 7 только прямая, к ЕГЭ все функции
+const LEVELS = [
+  { id: "line", title: "Прямая", grade: 7, fams: ["linear"] },
+  { id: "par0", title: "Парабола y = ax² + c", grade: 8, fams: ["parabola0"] },
+  { id: "hyp", title: "Гипербола", grade: 8, fams: ["hyperbola"] },
+  { id: "sqrt", title: "Квадратный корень", grade: 8, fams: ["sqrt0"] },
+  { id: "par", title: "Парабола со сдвигом", grade: 9, fams: ["parabola"] },
+  { id: "abs", title: "Модуль", grade: 9, fams: ["abs"] },
+  { id: "mixo", title: "Всё вперемешку: ОГЭ", grade: 9, fams: ["linear", "parabola0", "parabola", "hyperbola", "sqrt0", "abs"] },
+  { id: "exp", title: "Показательная", grade: 10, fams: ["exp"] },
+  { id: "log", title: "Логарифм", grade: 10, fams: ["log"] },
+  { id: "trig", title: "Синус и косинус", grade: 10, fams: ["trig"] },
+  { id: "cub", title: "Кубическая", grade: 11, fams: ["cubic"] },
+  { id: "mixe", title: "Всё вперемешку: ЕГЭ", grade: 11, fams: Object.keys(FAMILIES) },
+];
+const MODE_GRADE = { 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, oge: 9, ege: 11, ege_base: 11 };
+const grade = MODE_GRADE[new URLSearchParams(location.search).get("mode")] ?? 11;
+const levels = LEVELS.filter(l => l.grade <= grade);
+
+// ---------- звёзды: только в этом браузере ----------
+const KEY = "graphgame:stars";
+function loadStars() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+function saveStars(id, n) {
+  const all = loadStars();
+  if ((all[id] || 0) >= n) return;
+  all[id] = n;
+  try { localStorage.setItem(KEY, JSON.stringify(all)); } catch {}
+}
+const starLine = n => "★".repeat(n) + `<span class="off">${"★".repeat(5 - n)}</span>`;
+
+function showLevels() {
+  const best = loadStars();
+  $("levels").innerHTML = levels.map((l, i) => {
+    const open = i === 0 || (best[levels[i - 1].id] || 0) >= 3;
+    return `<button class="level" type="button" data-i="${i}" aria-disabled="${!open}">
+      <span>${open ? "" : "🔒 "}${i + 1}. ${l.title}</span>
+      <span class="stars">${starLine(best[l.id] || 0)}</span>
+      <small>${open ? "" : "нужно 3 звезды на прошлом уровне"}</small></button>`;
+  }).join("");
+  $("home").hidden = false; $("game").hidden = true;
+}
+$("levels").addEventListener("click", e => {
+  const b = e.target.closest(".level");
+  if (b && b.getAttribute("aria-disabled") !== "true") start(levels[+b.dataset.i]);
+});
+$("back").addEventListener("click", showLevels);
+
+// ---------- раунд ----------
+let round = null;
+const STRIPS = 6, W = 600, H = 400, PAD = 34;
+
+function sample(fn, a, b, n = 60) {
+  const out = [];
+  for (let i = 0; i <= n; i++) { const x = a + (b - a) * i / n, y = fn.f(x); if (Number.isFinite(y)) out.push([x, y]); }
+  return out;
+}
+
+// Окно по y: видно всю функцию, но не дальше ±10, чтобы гипербола и логарифм не сжимали картинку
+function yRange(fn) {
+  // Возле асимптоты значения огромные: окно берём по 90% точек, иначе гипербола прижмётся к оси
+  const ys = sample(fn, fn.x0, fn.x1, 240).map(p => p[1]);
+  const abs = ys.map(Math.abs).sort((a, b) => a - b), cap = Math.max(2, abs[Math.floor(abs.length * 0.9)] * 1.2);
+  const lo = Math.floor(Math.max(Math.min(-1, ...ys), -cap)) - 1, hi = Math.ceil(Math.min(Math.max(1, ...ys), cap)) + 1;
+  return [Math.max(lo, -10), Math.min(hi, 10)];
+}
+
+function distractors(fn, level) {
+  // Похожие функции: сильнее всего похожи на видимых крайних полосах, но отличаются в спрятанной середине
+  const pool = [];
+  for (let i = 0; i < 80; i++) {
+    const fam = i < 60 ? fn.fam : pick(level.fams);
+    const g = FAMILIES[fam].make();
+    g.fam = fam;
+    pool.push(g);
+  }
+  const step = (fn.x1 - fn.x0) / STRIPS, xs = sample(fn, fn.x0, fn.x1, 120).map(p => p[0]);
+  const visible = x => x <= fn.x0 + step || x >= fn.x1 - step;
+  const [lo, hi] = yRange(fn), clip = y => Math.max(lo, Math.min(hi, y));
+  const seen = new Set([fn.text]), out = [];
+  const scored = pool.map(g => {
+    let edge = 0, total = 0, n = 0;
+    for (const x of xs) {
+      const a = fn.f(x), b = g.f(x);
+      if (Number.isFinite(a) !== Number.isFinite(b)) { total = Math.max(total, 5); if (visible(x)) edge += 3; continue; }
+      if (!Number.isFinite(a)) continue;
+      const d = Math.abs(clip(a) - clip(b));
+      total = Math.max(total, d); n++;
+      if (visible(x)) edge += d;
+    }
+    return { g, edge: edge + Math.random() * 2, total };
+  }).filter(s => s.total > 0.75).sort((p, q) => p.edge - q.edge);
+  for (const s of scored) {
+    if (seen.has(s.g.text)) continue;
+    seen.add(s.g.text); out.push(s.g);
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+function piLabel(x) {  // x в долях π: π/2, π, 3π/2
+  const k = Math.round(x / (PI / 6));
+  const map = { 0: "0", 1: "π/6", 2: "π/3", 3: "π/2", 4: "2π/3", 5: "5π/6", 6: "π", 7: "7π/6", 8: "4π/3", 9: "3π/2", 10: "5π/3", 11: "11π/6", 12: "2π" };
+  return map[k];
+}
+
+// Вопрос карточки придумывается из самой функции, поэтому ответ всегда верный
+function question(fn, a, b, want = "") {
+  const kinds = [...(want ? [want] : []), ...shuffle(["value", "trend", "sign"]).filter(k => k !== want)];
+  for (const kind of kinds) {
+    if (kind === "value") {
+      const xs = [];
+      if (fn.pi) for (let k = 0; k <= 12; k++) { const x = k * PI / 6; if (x > a + 1e-9 && x < b - 1e-9) xs.push(x); }
+      else for (let x = Math.ceil(a * 2) / 2; x <= b + 1e-9; x += 0.5) if (x > a + 1e-9 && x < b - 1e-9) xs.push(x);
+      const good = xs.filter(x => nice(fn.f(x)) && Math.abs(fn.f(x)) <= 10);
+      if (!good.length) continue;
+      const x = pick(good), y = Math.round(fn.f(x) * 2) / 2;
+      const wrong = shuffle([1, -1, 2, -2, 0.5, -0.5, 3]).map(d => y + d).filter(v => v !== y).slice(0, 3);
+      return { text: `Чему равно y при x = ${fn.pi ? piLabel(x) : num(x)}?`, opts: shuffle([num(y), ...wrong.map(num)]), right: num(y),
+               why: `y(${fn.pi ? piLabel(x) : num(x)}) = ${num(y)}` };
+    }
+    const pts = sample(fn, a, b, 80);
+    if (pts.length < 10) continue;
+    if (kind === "trend") {
+      const d = pts.slice(1).map((p, i) => p[1] - pts[i][1]);
+      const up = d.filter(v => v > 1e-9).length, down = d.filter(v => v < -1e-9).length;
+      const first = d.findIndex(v => Math.abs(v) > 1e-9), last = d.length - 1 - [...d].reverse().findIndex(v => Math.abs(v) > 1e-9);
+      let right;
+      if (!down && up) right = "возрастает";
+      else if (!up && down) right = "убывает";
+      else if (d[first] < 0 && d[last] > 0) right = "сначала убывает, потом возрастает";
+      else if (d[first] > 0 && d[last] < 0) right = "сначала возрастает, потом убывает";
+      else continue;  // больше одного поворота на полосе: вопрос был бы нечестным
+      return { text: "Как ведёт себя функция на этой полосе?", right, why: `На полосе функция ${right}.`,
+               opts: ["возрастает", "убывает", "сначала убывает, потом возрастает", "сначала возрастает, потом убывает"] };
+    }
+    const ys = pts.map(p => p[1]);
+    const right = ys.every(y => y > 1e-9) ? "выше оси x" : ys.every(y => y < -1e-9) ? "ниже оси x" : "пересекает или касается оси x";
+    return { text: "Где проходит график на этой полосе?", right, why: `На полосе график ${right}.`,
+             opts: ["выше оси x", "ниже оси x", "пересекает или касается оси x"] };
+  }
+  return null;
+}
+
+function start(level) {
+  let fn, cards;
+  for (let tries = 0; tries < 50; tries++) {  // берём функцию, у которой у всех четырёх карточек есть честный вопрос
+    const fam = pick(level.fams);
+    fn = FAMILIES[fam].make(); fn.fam = fam;
+    const step = (fn.x1 - fn.x0) / STRIPS;
+    const wants = shuffle(["value", "value", "trend", "sign"]);  // вопросы разные, а не четыре одинаковых
+    cards = [1, 2, 3, 4].map((i, k) => ({ i, q: question(fn, fn.x0 + i * step, fn.x0 + (i + 1) * step, wants[k]), state: "closed" }));
+    if (cards.every(c => c.q)) break;
+  }
+  const others = distractors(fn, level);
+  round = { level, fn, cards, stars: 0, others, options: shuffle([fn, ...others]), done: false };
+  $("title").textContent = level.title;
+  $("home").hidden = true; $("game").hidden = false;
+  draw(); panel();
+  scrollTo(0, 0);
+}
+
+// ---------- рисунок ----------
+function draw() {
+  const { fn, cards } = round, [lo, hi] = yRange(fn);
+  const X = x => PAD + (x - fn.x0) / (fn.x1 - fn.x0) * (W - 2 * PAD), Y = y => PAD + (hi - y) / (hi - lo) * (H - 2 * PAD);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let s = "";
+  // клетки: по единице, у синуса по π/6
+  const xstep = fn.pi ? PI / 6 : (fn.x1 - fn.x0 > 8 ? 2 : 1), ystep = hi - lo > 12 ? 2 : 1;
+  for (let x = Math.ceil(fn.x0 / xstep) * xstep; x <= fn.x1 + 1e-9; x += xstep) s += `<line x1="${X(x)}" y1="${PAD}" x2="${X(x)}" y2="${H - PAD}" stroke="${css("--grid")}" stroke-width="1"/>`;
+  for (let y = Math.ceil(lo / ystep) * ystep; y <= hi; y += ystep) s += `<line x1="${PAD}" y1="${Y(y)}" x2="${W - PAD}" y2="${Y(y)}" stroke="${css("--grid")}" stroke-width="1"/>`;
+  // оси и подписи
+  if (fn.x0 <= 0 && fn.x1 >= 0) s += `<line x1="${X(0)}" y1="${PAD}" x2="${X(0)}" y2="${H - PAD}" stroke="${css("--ink")}" stroke-width="1.6"/>`;
+  if (lo <= 0 && hi >= 0) s += `<line x1="${PAD}" y1="${Y(0)}" x2="${W - PAD}" y2="${Y(0)}" stroke="${css("--ink")}" stroke-width="1.6"/>`;
+  let labels = "";  // подписи рисуются поверх карточек: по ним ученик читает x и y
+  const ty = lo <= 0 && hi >= 0 ? Y(0) + 22 : H - 6;
+  for (let x = Math.ceil(fn.x0 / xstep) * xstep; x <= fn.x1 + 1e-9; x += xstep) {
+    if (Math.abs(x) < 1e-9 || (fn.pi && Math.round(x / (PI / 6)) % 3)) continue;
+    labels += `<text x="${X(x)}" y="${ty}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" text-anchor="middle" fill="${css("--muted")}" font-family="${css("--mono")}">${fn.pi ? piLabel(x) : num(x)}</text>`;
+  }
+  const tx = fn.x0 <= 0 && fn.x1 >= 0 ? X(0) - 6 : PAD + 22;
+  for (let y = Math.ceil(lo / ystep) * ystep; y <= hi; y += ystep) {
+    if (y === 0) continue;
+    labels += `<text x="${tx}" y="${Y(y) + 7}" pointer-events="none" stroke="${css("--sheet")}" stroke-width="5" paint-order="stroke" font-size="20" text-anchor="end" fill="${css("--muted")}" font-family="${css("--mono")}">${num(y)}</text>`;
+  }
+  // кривая с разрывами: гипербола, корень и логарифм определены не везде
+  let path = "", pen = false;
+  for (let i = 0; i <= 600; i++) {
+    const x = fn.x0 + (fn.x1 - fn.x0) * i / 600, y = fn.f(x);
+    if (!Number.isFinite(y) || y < lo - 2 || y > hi + 2) { pen = false; continue; }
+    path += `${pen ? "L" : "M"}${X(x).toFixed(1)},${Y(Math.max(lo - 1, Math.min(hi + 1, y))).toFixed(1)}`;
+    pen = true;
+  }
+  s += `<clipPath id="area"><rect x="${PAD}" y="${PAD}" width="${W - 2 * PAD}" height="${H - 2 * PAD}"/></clipPath>`;
+  s += `<path d="${path}" fill="none" stroke="${css("--accent")}" stroke-width="4" stroke-linejoin="round" clip-path="url(#area)"/>`;
+  // карточки поверх средних полос
+  const step = (fn.x1 - fn.x0) / STRIPS, colors = ["--c1", "--c2", "--c3", "--c4"];
+  cards.forEach((c, k) => {
+    if (c.state === "open" || round.done) return;
+    const x = X(fn.x0 + c.i * step), w = X(fn.x0 + (c.i + 1) * step) - X(fn.x0 + c.i * step);  // без щелей: в щель был бы виден график
+    const label = c.state === "lost" ? "✗" : "🔒";
+    s += `<g class="card${c.state === "lost" ? " done" : ""}" data-k="${k}" role="button" tabindex="0" aria-label="Карточка ${k + 1}${c.state === "lost" ? ", закрыта навсегда" : ""}">
+      <rect x="${x}" y="${PAD}" width="${w}" height="${H - 2 * PAD}" rx="8" fill="${css(c.state === "lost" ? "--line" : colors[k])}" stroke="${css("--sheet")}" stroke-width="2"/>
+      <text x="${x + w / 2}" y="${H / 2 + 8}" text-anchor="middle">${label}</text></g>`;
+  });
+  $("plot").innerHTML = s + labels;
+  $("stars").innerHTML = starLine(round.stars);
+}
+
+$("plot").addEventListener("click", e => { const g = e.target.closest(".card"); if (g) ask(+g.dataset.k); });
+$("plot").addEventListener("keydown", e => { const g = e.target.closest(".card"); if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); ask(+g.dataset.k); } });
+
+// ---------- панель вопросов ----------
+function panel(note = "") {
+  const left = round.cards.filter(c => c.state === "closed").length;
+  if (round.done) return;
+  if (left) {
+    $("panel").innerHTML = `${note}<h2>Нажми на карточку</h2><p class="note">Верный ответ откроет полосу графика. Осталось карточек: ${left}.</p>
+      <div class="row"><button type="button" id="guess">Угадать функцию сейчас</button></div>`;
+    $("guess").onclick = finale;
+    return;
+  }
+  finale(note);
+}
+
+function ask(k) {
+  const c = round.cards[k];
+  if (c.state !== "closed" || round.done) return;
+  $("panel").innerHTML = `<h2>Карточка ${k + 1}</h2><p>${c.q.text}</p><div class="opts">${
+    c.q.opts.map(o => `<button type="button">${o}</button>`).join("")}</div>`;
+  $("panel").querySelectorAll(".opts button").forEach(b => b.onclick = () => {
+    const ok = b.textContent === c.q.right;
+    c.state = ok ? "open" : "lost";
+    round.stars += ok;
+    draw();
+    panel(`<p class="msg ${ok ? "ok" : "bad"}">${ok ? "Верно! Полоса открыта, +1 звезда." : `Неверно. ${c.q.why} Полоса остаётся закрытой.`}</p>`);
+  });
+  $("panel").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function finale(note = "") {
+  $("panel").innerHTML = `${typeof note === "string" ? note : ""}<h2>Какая функция спряталась?</h2><div class="opts">${
+    round.options.map((g, i) => `<button type="button" class="formula" data-i="${i}">${g.text}</button>`).join("")}</div>`;
+  $("panel").querySelectorAll(".opts button").forEach(b => b.onclick = () => {
+    const chosen = round.options[+b.dataset.i], ok = chosen === round.fn;
+    round.stars += ok; round.done = true;
+    saveStars(round.level.id, round.stars);
+    draw();
+    $("panel").querySelectorAll(".opts button").forEach(x => {
+      x.disabled = true;
+      if (round.options[+x.dataset.i] === round.fn) x.classList.add("right");
+      else if (x === b) x.classList.add("wrong");
+    });
+    const praise = round.stars === 5 ? "Идеально! 🏆" : round.stars >= 3 ? "Хороший раунд!" : "Попробуй ещё раз: функция будет другой.";
+    $("panel").insertAdjacentHTML("beforeend", `
+      <p class="msg ${ok ? "ok" : "bad"}">${ok ? "Верно!" : "Неверно."} Это <span class="formula">${round.fn.text}</span>.</p>
+      <p>Звёзд за раунд: ${round.stars} из 5. ${praise}</p>
+      <div class="row"><button class="main" type="button" id="again">Ещё раунд</button><button type="button" id="tolevels">К уровням</button></div>`);
+    $("again").onclick = () => start(round.level);
+    $("tolevels").onclick = showLevels;
+  });
+}
+
+showLevels();
+</script>
+</body>
+</html>
