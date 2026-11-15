@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: прыгай на платформу с верным ответом и поднимайся выше.">
+<title>Прыгун</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и остальных игр: лист миллиметровки. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f;
+  --plat: #e4edf7; --plat-edge: #9db7d6; --sky1: #eaf3fc; --sky2: #ffffff;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --plat: #223549; --plat-edge: #46627f; --sky1: #101d2a; --sky2: #15222f;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --plat: #223549; --plat-edge: #46627f; --sky1: #101d2a; --sky2: #15222f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 32px; display: grid; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 16px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.kind { display: grid; gap: 2px; text-align: left; border-color: var(--line); color: var(--ink); padding: 10px 12px; }
+.kind small { color: var(--muted); font-weight: 400; font-size: 13px; }
+.back { background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hud { display: flex; gap: 14px; align-items: center; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+.lives { letter-spacing: 2px; }
+.task { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 4px; }
+.task span { color: var(--muted); font-size: 13px; }
+.task b { font-size: 16px; line-height: 1.3; font-weight: 600; }
+.task b.short { font-size: 19px; }
+.bar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; }
+.bar i.low { background: var(--hit); }
+.field { position: relative; height: min(60vh, 600px); min-height: 400px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px;
+  background: linear-gradient(var(--sky1), var(--sky2)); touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.plat { position: absolute; left: 0; top: 0; display: grid; place-items: center; text-align: center; min-height: 46px; padding: 8px 10px; margin: 0;
+  background: var(--plat); border: 1px solid var(--plat-edge); border-bottom-width: 5px; border-radius: 10px; color: var(--ink);
+  font: 600 15px/1.2 var(--body); cursor: pointer; will-change: transform; overflow-wrap: anywhere; }
+.plat.formula { font: 500 15px/1.25 var(--mono); }
+.plat.base { cursor: default; color: var(--muted); font-weight: 500; font-size: 13px; }
+.plat.ok { border-color: var(--good); background: color-mix(in srgb, var(--good) 22%, var(--sheet)); }
+.plat.bad { border-color: var(--hit); background: color-mix(in srgb, var(--hit) 22%, var(--sheet)); }
+.plat.gone { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.hero { position: absolute; left: 0; top: 0; width: 40px; height: 40px; font-size: 32px; line-height: 40px; text-align: center; pointer-events: none; will-change: transform; z-index: 2; }
+.hint { min-height: 24px; font-weight: 600; color: var(--hit); text-align: center; }
+.hint.ok { color: var(--good); }
+.big { font: 700 44px var(--display); }
+.errors { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row button { flex: 1 1 140px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Прыгун</h1>
+    <p class="lead" style="margin-top:8px">Сверху вопрос, на платформах ответы. Нажми на платформу с верным ответом, и яблоко прыгнет выше. Ошибся или не успел — минус жизнь, жизней три.</p>
+  </header>
+  <section class="sheet">
+    <h2>Что спрашивать</h2>
+    <div class="kinds" id="kinds"></div>
+    <p class="note" id="empty" hidden>Для этого режима вопросов пока нет.</p>
+  </section>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">← Назад</button>
+    <div class="hud"><span id="height"></span><span id="score">0</span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="task"><span id="label"></span><b id="ask"></b><div class="bar"><i id="time"></i></div></div>
+  <div class="field" id="field"><div class="hero" id="hero">🍎</div></div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Игра окончена</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="climb"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Где ошибся</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script>
+"use strict";
+function telegram(event, data = {}) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), "*");
+  } catch {}
+}
+telegram("web_app_ready");
+telegram("web_app_expand");
+
+const $ = id => document.getElementById(id);
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const shuffle = list => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const params = new URLSearchParams(location.search);
+const subject = ["phys", "math", "info", "chem"].includes(params.get("s")) ? params.get("s") : "phys";
+const mode = params.get("mode");
+const MODE_GRADE = { 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, oge: 9, ege: 11, ege_base: 11 };
+const grade = MODE_GRADE[mode] ?? 11;
+
+// ---------- вопросы ----------
+// Вопросы собираются из справочника бота (ref-<предмет>.js): те же формулы и термины, что в уроках, и только для режима ученика.
+
+let BANK = {};
+const KINDS = [
+  { id: "all", title: "🎲 Всё подряд" }, { id: "terms", title: "📖 Термины" }, { id: "formulas", title: "📐 Формулы" }, { id: "trivial", title: "🏷 Тривиальные названия" },
+];
+
+function buildBank(data) {
+  const ok = x => !mode || !data.modes[mode] || x.m.includes(mode);  // без режима или с чужим режимом берём всё
+  BANK = { terms: data.terms.filter(ok), formulas: data.formulas.filter(ok), trivial: (data.trivial || []).filter(t => t.g <= grade) };
+  for (const k of Object.keys(BANK)) if (BANK[k].length < 3) delete BANK[k];
+}
+
+// Неверные ответы берём по соседству: соседние термины списка из той же темы учебника, формулы из того же раздела
+function near(list, i, same, n = 2) {
+  const far = k => Math.abs(k - i), all = list.map((x, k) => k).filter(k => k !== i && same(list[k]));
+  const close = all.filter(k => far(k) <= 12);
+  return shuffle(close.length >= n ? close : all).slice(0, n).map(k => list[k]);
+}
+
+const MAKERS = {
+  terms() {
+    const list = BANK.terms, i = Math.floor(Math.random() * list.length), t = list[i], seen = new Set([t.w.toLowerCase()]);
+    const wrong = near(list, i, x => !seen.has(x.w.toLowerCase()) && seen.add(x.w.toLowerCase()));
+    return { key: "t" + i, label: "Какой это термин?", text: cap(t.d), right: cap(t.w), wrong: wrong.map(x => cap(x.w)), note: `${cap(t.w)} — ${t.d}` };
+  },
+  formulas() {
+    const list = BANK.formulas, i = Math.floor(Math.random() * list.length), f = list[i], seen = new Set([f.e, ...f.a]);
+    // Та же формула в другом виде (s = υt для скорости) неверным ответом быть не может
+    const fits = topic => x => (!topic || x.t === f.t) && !seen.has(x.e) && !x.a.includes(f.e) && seen.add(x.e);
+    let wrong = near(list, i, fits(true));
+    if (wrong.length < 2) wrong = [...wrong, ...near(list, i, fits(false), 2 - wrong.length)];
+    return { key: "f" + i, label: "Выбери формулу", text: f.n, right: f.e, wrong: wrong.map(x => x.e), note: `${f.n}: ${f.e}`, formula: true };
+  },
+  trivial() {
+    const list = BANK.trivial, i = Math.floor(Math.random() * list.length), t = list[i], seen = new Set([t.f]);
+    const wrong = near(list, i, x => !seen.has(x.f) && seen.add(x.f));
+    const name = cap(pick(t.n));
+    return { key: "v" + i, label: "Какая формула у вещества?", text: name, right: t.f, wrong: wrong.map(x => x.f), note: `${name} — это ${t.f}`, formula: true };
+  },
+};
+
+function question() {
+  const s = state, kinds = s.kind === "all" ? Object.keys(BANK) : [s.kind];
+  for (let tries = 0; tries < 40; tries++) {
+    const q = MAKERS[pick(kinds)]();
+    if (q.wrong.length < 2 || s.used.has(q.key)) continue;
+    s.used.add(q.key);
+    return q;
+  }
+  s.used.clear();  // всё спросили — идём по второму кругу
+  return question();
+}
+
+const KEY = "jumper:best";
+function loadBest() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+function best(id) { return loadBest()[subject + ":" + id] || 0; }
+function saveBest(id, score) {
+  const all = loadBest();
+  if (score <= (all[subject + ":" + id] || 0)) return false;
+  all[subject + ":" + id] = score;
+  try { localStorage.setItem(KEY, JSON.stringify(all)); } catch {}
+  return true;
+}
+
+// ---------- игра ----------
+
+const LIVES = 3, HERO = 40;
+const field = $("field"), hero = $("hero");
+let state = null, raf = 0;
+
+// Все движения идут через animate: шаг получает долю пути от 0 до 1. В проверках её подменяют мгновенной.
+let animate = (ms, step) => new Promise(done => {
+  const from = performance.now(), game = state;
+  const tick = now => {
+    if (state !== game) return;  // игру закрыли посреди прыжка
+    const t = Math.min(1, (now - from) / ms);
+    step(t);
+    t < 1 ? requestAnimationFrame(tick) : done();
+  };
+  requestAnimationFrame(tick);
+});
+
+const put = (el, x, y) => { el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; };
+const stand = p => [p.x + p.w / 2 - HERO / 2, p.y - HERO + 4];
+
+function platform(text, x, y, w, cls = "") {
+  const el = document.createElement("div");
+  el.className = "plat " + cls;
+  el.textContent = text;
+  el.style.width = w + "px";
+  field.append(el);
+  const p = { el, x, y, w };
+  put(el, x, y);
+  return p;
+}
+
+function hud() {
+  const s = state;
+  $("score").textContent = `★ ${s.score}`;
+  $("height").textContent = `↑ ${s.height}`;
+  $("lives").textContent = "❤️".repeat(s.lives) + "🤍".repeat(LIVES - s.lives);
+}
+
+function ask() {
+  const s = state, q = s.q = question(), W = field.clientWidth, w = Math.min(Math.round(W * 0.66), 320);
+  $("label").textContent = q.label;
+  $("ask").textContent = q.text;
+  $("ask").className = q.text.length < 40 ? "short" : "";
+  // три платформы лесенкой: по очереди слева и справа, чтобы длинный ответ поместился целиком
+  const gap = (s.base.y - 16) / 3.15, side = Math.random() < 0.5 ? 0 : 1;
+  s.plats = shuffle([q.right, ...q.wrong]).map((text, k) => {
+    const p = platform(text, (k + side) % 2 ? W - w - 6 : 6, s.base.y - gap * (k + 1), w, q.formula ? "formula" : "");
+    p.right = text === q.right;
+    p.el.addEventListener("pointerdown", e => { e.preventDefault(); choose(p); });
+    return p;
+  });
+  s.limit = Math.max(0.6, 1 - s.height * 0.025) * (9 + q.text.length / 11) * 1000;  // длинное определение дольше читать
+  s.left = s.limit;
+  s.busy = false;
+  hud();
+}
+
+function jump(to, ms = 430) {
+  const s = state, [x0, y0] = s.pos, [x1, y1] = to, lift = 46 + Math.abs(y1 - y0) * 0.15;
+  return animate(ms, t => { s.pos = [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 4 * lift * t * (1 - t)]; put(hero, ...s.pos); });
+}
+
+const wait = ms => animate(ms, () => {});
+
+async function choose(p) {
+  const s = state;
+  if (!s || s.busy) return;
+  s.busy = true;
+  await jump(stand(p));
+  if (state !== s) return;
+  if (p.right) {
+    const bonus = Math.ceil(s.left / 1000);
+    s.height++; s.score += 10 + bonus;
+    p.el.classList.add("ok");
+    if (performance.now() > s.hintUntil) { $("hint").className = "hint ok"; $("hint").textContent = `+${10 + bonus}: 10 за ответ и ${bonus} за скорость`; }
+    hud();
+    await climb(p);
+  } else {
+    p.el.classList.add("bad");
+    await lose(p);
+  }
+}
+
+// Верный ответ: вся картинка съезжает вниз, платформа с ответом становится новой опорой
+async function climb(p) {
+  const s = state, dy = s.base.y - p.y, all = [s.base, ...s.plats], y0 = all.map(a => a.y), hy = s.pos[1];
+  s.plats.filter(a => a !== p).forEach(a => a.el.classList.add("gone"));
+  await animate(380, t => { all.forEach((a, k) => { a.y = y0[k] + dy * t; put(a.el, a.x, a.y); }); s.pos[1] = hy + dy * t; put(hero, ...s.pos); });
+  if (state !== s) return;
+  all.filter(a => a !== p).forEach(a => a.el.remove());
+  p.el.className = "plat base";
+  s.base = p;
+  ask();
+}
+
+// Ошибка или вышло время: показываем верную платформу, яблоко возвращается на опору
+async function lose(p) {
+  const s = state, q = s.q;
+  s.lives--;
+  s.errors.set(q.key, q.note);
+  s.plats.find(a => a.right).el.classList.add("ok");
+  $("hint").className = "hint";
+  $("hint").textContent = (p ? "Неверно. " : "Время вышло. ") + "Верный ответ: " + q.right;
+  s.hintUntil = performance.now() + 3500;
+  try { navigator.vibrate?.(60); } catch {}
+  hud();
+  if (p) {
+    const y0 = p.y;
+    await Promise.all([jump(stand(s.base), 520), animate(520, t => { p.y = y0 + 260 * t * t; put(p.el, p.x, p.y); p.el.style.opacity = 1 - t; })]);
+  }
+  await wait(1500);
+  if (state !== s) return;
+  s.plats.forEach(a => a.el.remove());
+  if (s.lives <= 0) return finish();
+  ask();
+}
+
+function clock(now) {
+  const s = state;
+  if (!s) return;
+  raf = requestAnimationFrame(clock);
+  const dt = Math.min(100, now - s.last);  // свёрнутая вкладка время не съедает
+  s.last = now;
+  if (s.busy) return;
+  s.left -= dt;
+  const share = Math.max(0, s.left / s.limit);
+  $("time").style.transform = `scaleX(${share})`;
+  $("time").className = share < 0.3 ? "low" : "";
+  if (s.left <= 0) { s.busy = true; lose(null); }
+}
+
+function start(kind) {
+  stop();
+  show("game");
+  const W = field.clientWidth, H = field.clientHeight, w = Math.min(Math.round(W * 0.66), 320);
+  state = { kind, score: 0, lives: LIVES, height: 0, used: new Set(), errors: new Map(), plats: [], busy: true, last: performance.now(), hintUntil: 0, left: 1, limit: 1 };
+  state.base = platform("старт", (W - w) / 2, H - 58, w, "base");
+  state.pos = stand(state.base);
+  put(hero, ...state.pos);
+  $("hint").textContent = "";
+  ask();
+  raf = requestAnimationFrame(clock);
+}
+
+function stop() {
+  cancelAnimationFrame(raf);
+  state = null;
+  field.querySelectorAll(".plat").forEach(el => el.remove());
+}
+
+function finish() {
+  const s = state;
+  stop();
+  const record = saveBest(s.kind, s.score);
+  $("final").textContent = `${s.score} ${plural(s.score, "очко", "очка", "очков")}`;
+  $("climb").textContent = `Поднялся на ${s.height} ${plural(s.height, "платформу", "платформы", "платформ")}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${best(s.kind)}`;
+  $("errors").replaceChildren(...[...s.errors.values()].map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+  $("errbox").hidden = !s.errors.size;
+  $("again").onclick = () => start(s.kind);
+  show("over");
+}
+
+function plural(n, one, few, many) {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
+}
+
+function show(id) {
+  for (const x of ["home", "game", "over"]) $(x).hidden = x !== id;
+  scrollTo(0, 0);
+}
+
+function home() {
+  stop();
+  const kinds = KINDS.filter(k => k.id === "all" ? Object.keys(BANK).length > 1 : BANK[k.id]);
+  $("empty").hidden = kinds.length > 0;
+  $("kinds").replaceChildren(...kinds.map(k => {
+    const b = document.createElement("button");
+    b.className = "kind";
+    b.innerHTML = `<span></span><small>${best(k.id) ? "рекорд " + best(k.id) : "ещё не играл"}</small>`;
+    b.firstChild.textContent = k.title;
+    b.addEventListener("click", () => start(k.id));
+    return b;
+  }));
+  show("home");
+}
+
+$("quit").addEventListener("click", home);
+$("menu").addEventListener("click", home);
+
+const loader = document.createElement("script");
+loader.src = `ref-${subject}.js`;
+loader.onload = () => { buildBank(REF_DATA); home(); };
+loader.onerror = () => { $("empty").hidden = false; $("empty").textContent = "Не получилось загрузить вопросы. Проверь интернет и открой игру ещё раз."; };
+document.head.append(loader);
+</script>
+</body>
+</html>
