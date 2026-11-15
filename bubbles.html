@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: лопай только те пузыри, которые подходят к заданию.">
+<title>Лопни пузырь</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и игры графиков: лист миллиметровки. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f; --star: #e8a300;
+  --b1: #cfe3fb; --b2: #d9f1dc; --b3: #fde9bd; --b4: #f9d5e3; --b5: #e2dcfa; --rim: #7fa6d9;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --star: #ffc93c;
+  --b1: #23405f; --b2: #224a38; --b3: #54451d; --b4: #55303f; --b5: #3a3463; --rim: #5f83b3;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --star: #ffc93c;
+  --b1: #23405f; --b2: #224a38; --b3: #54451d; --b4: #55303f; --b5: #3a3463; --rim: #5f83b3;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 32px; display: grid; gap: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 16px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.topic { display: grid; gap: 2px; text-align: left; border-color: var(--line); color: var(--ink); padding: 10px 12px; }
+.topic small { color: var(--muted); font-weight: 400; font-size: 13px; }
+.back { background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hud { display: flex; gap: 14px; align-items: center; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+.lives { letter-spacing: 2px; }
+.task { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px; }
+.task b { font-size: 18px; line-height: 1.25; }
+.task span { color: var(--muted); font-size: 13px; }
+.sea { position: relative; height: min(62vh, 560px); min-height: 340px; overflow: hidden; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.bubble { position: absolute; left: 0; top: 0; display: grid; place-items: center; text-align: center; border-radius: 50%; padding: 6px; cursor: pointer;
+  border: 2px solid var(--rim); color: var(--ink); font: 600 17px/1.15 var(--body); will-change: transform;
+  background: radial-gradient(circle at 24% 20%, #ffffffcc 0 6%, transparent 7%), var(--fill); box-shadow: inset -6px -8px 14px #0000001a; }
+.bubble.small { font-size: 14px; }
+.bubble.pop { pointer-events: none; border-color: var(--good); animation: pop 0.28s ease-out forwards; }
+.bubble.miss { pointer-events: none; border-color: var(--hit); background: color-mix(in srgb, var(--hit) 30%, var(--sheet)); animation: shake 0.5s ease-out forwards; }
+@keyframes pop { to { scale: 1.5; opacity: 0; } }
+@keyframes shake { 20% { translate: -6px 0; } 40% { translate: 6px 0; } 60% { translate: -4px 0; } 80% { translate: 3px 0; } 100% { opacity: 0; } }
+.banner { position: absolute; inset: 0; display: grid; place-content: center; gap: 6px; text-align: center; padding: 20px; background: color-mix(in srgb, var(--sheet) 88%, transparent); z-index: 2; }
+.banner b { font: 700 22px/1.25 var(--display); text-wrap: balance; }
+.banner span { color: var(--muted); }
+.hint { min-height: 24px; font-weight: 600; color: var(--hit); text-align: center; }
+.hint.ok { color: var(--good); }
+.big { font: 700 44px var(--display); }
+.errors { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row button { flex: 1 1 140px; }
+@media (prefers-reduced-motion: reduce) { .bubble.pop, .bubble.miss { animation-duration: 0.01s; } }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Лопни пузырь</h1>
+    <p class="lead" style="margin-top:8px">Сверху задание, снизу летят пузыри. Лопай только те, что подходят. Ошибся — минус жизнь, жизней три.</p>
+  </header>
+  <button class="main" id="all">🎲 Все темы подряд</button>
+  <section class="sheet">
+    <h2>Или выбери тему</h2>
+    <div class="topics" id="topics"></div>
+  </section>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">← Темы</button>
+    <div class="hud"><span id="score">0</span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="task"><b id="ask"></b><span id="progress"></span></div>
+  <div class="sea" id="sea"></div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Игра окончена</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Где ошибся</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Темы</button></div>
+</main>
+
+<script>
+"use strict";
+function telegram(event, data = {}) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), "*");
+  } catch {}
+}
+telegram("web_app_ready");
+telegram("web_app_expand");
+
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const SUB = "₀₁₂₃₄₅₆₇₈₉";
+const sub = n => String(n).replace(/\d/g, d => SUB[d]);
+
+// ---------- задания ----------
+// Тема — набор групп, которые не пересекаются. Задание: лопать одну группу, остальные группы темы летят как ловушки.
+// ask — что лопать (после слова «Лопай»), is — чем является пузырь (для объяснения ошибки), from — с какого класса тема.
+// Группа без ask бывает только ловушкой. make() делает пузырь на ходу и может вернуть своё объяснение.
+
+const isPrime = n => { for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return n > 1; };
+const factor = n => { for (let d = 2; d * d <= n; d++) if (n % d === 0) return d; return n; };
+const PRIMES = Array.from({ length: 98 }, (_, i) => i + 2).filter(isPrime);
+const ODD_COMPOSITE = Array.from({ length: 98 }, (_, i) => i + 2).filter(n => n % 2 && !isPrime(n));
+const digitSum = n => String(n).split("").reduce((s, d) => s + +d, 0);
+
+function divides(k) {
+  const rule = n => k === 4 ? `последние две цифры ${String(n).slice(-2)}` : `сумма цифр ${digitSum(n)}`;
+  return { id: "div" + k, title: `Делится на ${k}`, from: 7, cats: [
+    { ask: `числа, которые делятся на ${k}`, make() { const n = k * rnd(Math.ceil(30 / k), Math.floor(600 / k)); return { t: String(n), why: `${n} делится на ${k}: ${rule(n)}` }; } },
+    { ask: `числа, которые НЕ делятся на ${k}`, make() { let n; do n = rnd(30, 600); while (n % k === 0); return { t: String(n), why: `${n} не делится на ${k}: ${rule(n)}` }; } },
+  ] };
+}
+
+function inBase() {
+  const base = pick([2, 8, 16]);
+  return n => n.toString(base).toUpperCase() + sub(base);
+}
+
+const TOPICS = {
+  phys: [
+    { id: "units", title: "Единицы величин", from: 7, cats: [
+      { ask: "единицы силы", is: "единица силы", items: ["Н", "кН", "мН", "МН"] },
+      { ask: "единицы энергии и работы", is: "единица энергии и работы", items: ["Дж", "кДж", "МДж", "кал"] },
+      { ask: "единицы мощности", is: "единица мощности", items: ["Вт", "кВт", "МВт", "л. с."] },
+      { ask: "единицы давления", is: "единица давления", items: ["Па", "кПа", "мм рт. ст.", "МПа", "атм"] },
+      { ask: "единицы массы", is: "единица массы", items: ["кг", "г", "т", "мг"] },
+      { is: "единица длины", items: ["м", "км", "см"] },
+      { is: "единица времени", items: ["с", "мин", "ч"] },
+    ] },
+    { id: "bodies", title: "Тело или вещество", from: 7, cats: [
+      { ask: "физические тела", is: "физическое тело", items: ["гвоздь", "капля", "мяч", "льдина", "стакан", "Луна", "линейка"] },
+      { ask: "вещества", is: "вещество", items: ["вода", "железо", "стекло", "медь", "кислород", "алюминий", "резина"] },
+      { is: "явление", items: ["гром", "радуга", "кипение", "эхо"] },
+    ] },
+    { id: "events", title: "Физические явления", from: 7, cats: [
+      { ask: "тепловые явления", is: "тепловое явление", items: ["плавление", "кипение", "испарение", "нагревание", "замерзание"] },
+      { ask: "механические явления", is: "механическое явление", items: ["падение", "качение", "полёт мяча", "торможение"] },
+      { ask: "световые явления", is: "световое явление", items: ["радуга", "тень", "отражение", "мираж"] },
+      { ask: "звуковые явления", is: "звуковое явление", items: ["эхо", "гром", "свист", "пение"] },
+      { is: "электрическое явление", items: ["молния", "ток в проводе"] },
+    ] },
+    { id: "el_units", title: "Единицы в электричестве", from: 8, cats: [
+      { ask: "единицы напряжения", is: "единица напряжения", items: ["В", "кВ", "мВ"] },
+      { ask: "единицы силы тока", is: "единица силы тока", items: ["А", "мА", "мкА"] },
+      { ask: "единицы сопротивления", is: "единица сопротивления", items: ["Ом", "кОм", "МОм"] },
+      { ask: "единицы заряда", is: "единица заряда", items: ["Кл", "мкКл", "нКл"] },
+      { is: "единица мощности", items: ["Вт", "кВт"] },
+      { is: "единица работы тока", items: ["Дж", "кВт·ч"] },
+    ] },
+    { id: "conduct", title: "Проводники и диэлектрики", from: 8, cats: [
+      { ask: "проводники", is: "проводник", items: ["медь", "алюминий", "серебро", "графит", "сталь", "раствор соли", "золото"] },
+      { ask: "диэлектрики", is: "диэлектрик", items: ["стекло", "резина", "пластмасса", "фарфор", "сухое дерево", "воздух", "янтарь"] },
+    ] },
+    { id: "heat", title: "Формулы: тепло или ток", from: 8, cats: [
+      { ask: "формулы тепловых явлений", is: "формула тепловых явлений", items: ["Q = cmΔt", "Q = λm", "Q = qm", "Q = Lm"] },
+      { ask: "формулы электричества", is: "формула электричества", items: ["I = U / R", "P = UI", "Q = I²Rt", "A = UIt", "R = ρl / S"] },
+      { is: "формула механики", items: ["s = υt", "ρ = m / V", "p = F / S"] },
+    ] },
+    { id: "vectors", title: "Векторы и скаляры", from: 9, cats: [
+      { ask: "векторные величины", is: "векторная величина", items: ["скорость", "ускорение", "сила", "перемещение", "импульс"] },
+      { ask: "скалярные величины", is: "скалярная величина", items: ["масса", "время", "путь", "энергия", "работа", "температура", "плотность", "мощность"] },
+    ] },
+    { id: "charge", title: "Заряд частиц", from: 9, cats: [
+      { ask: "положительно заряженные частицы", is: "заряжен положительно", items: ["протон", "α-частица", "ядро атома", "положительный ион"] },
+      { ask: "отрицательно заряженные частицы", is: "заряжен отрицательно", items: ["электрон", "β-частица", "отрицательный ион"] },
+      { ask: "частицы без заряда", is: "заряда не имеет", items: ["нейтрон", "атом", "γ-квант", "молекула"] },
+    ] },
+    { id: "mech", title: "Формулы механики", from: 9, cats: [
+      { ask: "формулы кинематики", is: "формула кинематики", items: ["υ = υ₀ + at", "s = υ₀t + at² / 2", "a = υ² / R", "x = x₀ + υt"] },
+      { ask: "формулы динамики", is: "формула динамики", items: ["F = ma", "F = kx", "F = μN", "F = GMm / r²"] },
+      { ask: "формулы импульса и энергии", is: "формула импульса и энергии", items: ["p = mυ", "E = mυ² / 2", "E = mgh", "A = Fs", "E = kx² / 2"] },
+    ] },
+    { id: "iso", title: "Изопроцессы", from: 10, cats: [
+      { ask: "то, что относится к изотермическому процессу", is: "относится к изотермическому процессу", items: ["T = const", "pV = const", "ΔU = 0", "Q = A"] },
+      { ask: "то, что относится к изобарному процессу", is: "относится к изобарному процессу", items: ["p = const", "V / T = const", "A = pΔV"] },
+      { ask: "то, что относится к изохорному процессу", is: "относится к изохорному процессу", items: ["V = const", "p / T = const", "A = 0", "Q = ΔU"] },
+    ] },
+    { id: "waves", title: "Шкала электромагнитных волн", from: 11, cats: [
+      { ask: "волны длиннее видимого света", is: "длиннее видимого света", items: ["радиоволны", "инфракрасное", "микроволны"] },
+      { ask: "волны короче видимого света", is: "короче видимого света", items: ["ультрафиолет", "рентгеновское", "γ-излучение"] },
+      { is: "видимый свет", items: ["красный свет", "зелёный свет", "фиолетовый свет"] },
+    ] },
+  ],
+  math: [
+    { id: "prime", title: "Простые и составные", from: 7, cats: [
+      { ask: "простые числа", make() { const n = pick(PRIMES); return { t: String(n), why: `${n} — простое число` }; } },
+      { ask: "составные числа", make() { const n = Math.random() < 0.75 ? pick(ODD_COMPOSITE) : 2 * rnd(2, 49); return { t: String(n), why: `${n} — составное: ${n} = ${factor(n)} · ${n / factor(n)}` }; } },
+    ] },
+    divides(3), divides(9), divides(4),
+    { id: "angles", title: "Острые и тупые углы", from: 7, cats: [
+      { ask: "острые углы", make() { const n = rnd(5, 89); return { t: n + "°", why: `${n}° — острый угол, меньше 90°` }; } },
+      { ask: "тупые углы", make() { const n = rnd(91, 179); return { t: n + "°", why: `${n}° — тупой угол, больше 90°` }; } },
+      { is: "прямой угол", items: ["90°"] },
+      { is: "развёрнутый угол", items: ["180°"] },
+    ] },
+    { id: "lines", title: "Линейные функции", from: 7, cats: [
+      { ask: "возрастающие функции", is: "возрастает: коэффициент при x положительный", items: ["y = 2x − 1", "y = 0,5x", "y = x + 4", "y = 3x", "y = x − 7", "y = 4 + 5x"] },
+      { ask: "убывающие функции", is: "убывает: коэффициент при x отрицательный", items: ["y = −2x", "y = 5 − x", "y = −0,5x + 1", "y = −x − 3", "y = 2 − 3x", "y = −4x + 9"] },
+      { is: "постоянная: не растёт и не убывает", items: ["y = 3", "y = −2"] },
+    ] },
+    { id: "powers", title: "Верно или неверно: степени", from: 7, cats: [
+      { ask: "верные равенства", items: [{ t: "2³ = 8" }, { t: "(−3)² = 9" }, { t: "5⁰ = 1" }, { t: "2⁵ = 32" }, { t: "a² · a³ = a⁵" }, { t: "(a²)³ = a⁶" }, { t: "a⁶ : a² = a⁴" }, { t: "(−2)³ = −8" }, { t: "(ab)² = a²b²" }]
+        .map(x => ({ ...x, why: `${x.t} — верное равенство` })) },
+      { ask: "неверные равенства", items: [{ t: "2³ = 6", why: "неверно: 2³ = 8" }, { t: "−3² = 9", why: "неверно: −3² = −9, квадрат без скобок относится только к 3" },
+        { t: "5⁰ = 0", why: "неверно: 5⁰ = 1" }, { t: "a² · a³ = a⁶", why: "неверно: a² · a³ = a⁵, показатели складываются" },
+        { t: "(a²)³ = a⁵", why: "неверно: (a²)³ = a⁶, показатели умножаются" }, { t: "a⁶ : a² = a³", why: "неверно: a⁶ : a² = a⁴, показатели вычитаются" },
+        { t: "(a + b)² = a² + b²", why: "неверно: (a + b)² = a² + 2ab + b²" }, { t: "(−2)³ = 8", why: "неверно: (−2)³ = −8" }, { t: "3² = 6", why: "неверно: 3² = 9" }] },
+    ] },
+    { id: "squares", title: "Точные квадраты", from: 8, cats: [
+      { ask: "квадраты целых чисел", make() { const k = rnd(2, 15); return { t: String(k * k), why: `${k * k} = ${k}²` }; } },
+      { ask: "числа, которые НЕ квадраты", make() { const k = rnd(2, 14), n = k * k + rnd(1, 2 * k); return { t: String(n), why: `${n} не квадрат: ${k}² = ${k * k}, а ${k + 1}² = ${(k + 1) ** 2}` }; } },
+    ] },
+    { id: "rational", title: "Рациональные и иррациональные", from: 8, cats: [
+      { ask: "рациональные числа", items: [{ t: "0,5" }, { t: "1/3" }, { t: "−7" }, { t: "0,(3)" }, { t: "2,25" }, { t: "0" },
+        { t: "√16", why: "√16 = 4 — рациональное число" }, { t: "√0,25", why: "√0,25 = 0,5 — рациональное число" }, { t: "√81", why: "√81 = 9 — рациональное число" }]
+        .map(x => ({ why: `${x.t} — рациональное число`, ...x })) },
+      { ask: "иррациональные числа", is: "иррациональное число", items: ["√2", "√3", "π", "√5", "√10", "√8", "2√3", "√7"] },
+    ] },
+    { id: "roots", title: "Верно или неверно: корни", from: 8, cats: [
+      { ask: "верные равенства", items: [{ t: "√49 = 7" }, { t: "√0,04 = 0,2" }, { t: "√8 = 2√2" }, { t: "√2 · √8 = 4" }, { t: "√(a²) = |a|" }, { t: "√50 = 5√2" }, { t: "√144 = 12" }]
+        .map(x => ({ ...x, why: `${x.t} — верное равенство` })) },
+      { ask: "неверные равенства", items: [{ t: "√9 = ±3", why: "неверно: √9 = 3, арифметический корень не бывает отрицательным" }, { t: "√(9 + 16) = 7", why: "неверно: √(9 + 16) = √25 = 5" },
+        { t: "√0,4 = 0,2", why: "неверно: 0,2² = 0,04, а не 0,4" }, { t: "√8 = 4", why: "неверно: √8 = 2√2 ≈ 2,83" }, { t: "√(a²) = a", why: "неверно при a < 0: √(a²) = |a|" },
+        { t: "√2 + √3 = √5", why: "неверно: корни так не складываются" }, { t: "√12 = 3√2", why: "неверно: √12 = 2√3" }] },
+    ] },
+    { id: "parity", title: "Чётные и нечётные функции", from: 10, cats: [
+      { ask: "чётные функции", is: "чётная функция: y(−x) = y(x)", items: ["y = x²", "y = cos x", "y = |x|", "y = x⁴ + 1", "y = 3 − x²"] },
+      { ask: "нечётные функции", is: "нечётная функция: y(−x) = −y(x)", items: ["y = x³", "y = sin x", "y = 1 / x", "y = tg x", "y = 2x"] },
+      { is: "ни чётная, ни нечётная", items: ["y = x + 1", "y = 2ˣ", "y = √x", "y = (x − 1)²"] },
+    ] },
+    { id: "trig", title: "Знаки синуса и косинуса", from: 10, cats: [
+      { ask: "положительные значения", items: [["sin 30°", "I"], ["cos 300°", "IV"], ["tg 200°", "III"], ["sin 150°", "II"], ["cos 60°", "I"], ["tg 45°", "I"], ["cos 350°", "IV"], ["sin 100°", "II"]]
+        .map(([t, q]) => ({ t, why: `${t} > 0: угол в ${q} четверти` })) },
+      { ask: "отрицательные значения", items: [["cos 120°", "II"], ["sin 200°", "III"], ["tg 100°", "II"], ["sin 330°", "IV"], ["cos 200°", "III"], ["tg 300°", "IV"], ["sin 250°", "III"], ["cos 170°", "II"]]
+        .map(([t, q]) => ({ t, why: `${t} < 0: угол в ${q} четверти` })) },
+    ] },
+    { id: "logs", title: "Верно или неверно: логарифмы", from: 11, cats: [
+      { ask: "верные равенства", items: [{ t: "log₂ 8 = 3" }, { t: "log₃ 1 = 0" }, { t: "lg 100 = 2" }, { t: "log₅ 5 = 1" }, { t: "log₂ 0,5 = −1" }, { t: "log₄ 2 = 0,5" }, { t: "log₂ 4 + log₂ 8 = 5" }]
+        .map(x => ({ ...x, why: `${x.t} — верное равенство` })) },
+      { ask: "неверные равенства", items: [{ t: "log₂ 8 = 4", why: "неверно: log₂ 8 = 3, потому что 2³ = 8" }, { t: "log₃ 1 = 1", why: "неверно: log₃ 1 = 0, потому что 3⁰ = 1" },
+        { t: "lg 100 = 10", why: "неверно: lg 100 = 2, потому что 10² = 100" }, { t: "log₂ 6 = 3", why: "неверно: 2³ = 8, а не 6" },
+        { t: "log₂ 3 + log₂ 5 = log₂ 8", why: "неверно: сумма логарифмов равна логарифму произведения, log₂ 15" }, { t: "log₅ 0 = 1", why: "неверно: логарифм нуля не существует" }] },
+    ] },
+  ],
+  info: [
+    { id: "devices", title: "Устройства компьютера", from: 7, cats: [
+      { ask: "устройства ввода", is: "устройство ввода", items: ["клавиатура", "мышь", "микрофон", "сканер", "веб-камера", "джойстик"] },
+      { ask: "устройства вывода", is: "устройство вывода", items: ["монитор", "принтер", "колонки", "наушники", "проектор"] },
+      { ask: "устройства хранения", is: "устройство хранения", items: ["жёсткий диск", "флешка", "SSD", "карта памяти"] },
+    ] },
+    { id: "files", title: "Типы файлов", from: 7, cats: [
+      { ask: "текстовые файлы", is: "текстовый файл", items: [".txt", ".docx", ".odt", ".rtf"] },
+      { ask: "файлы с картинками", is: "файл с изображением", items: [".png", ".jpg", ".bmp", ".gif"] },
+      { ask: "звуковые файлы", is: "звуковой файл", items: [".mp3", ".wav", ".ogg"] },
+      { is: "видеофайл", items: [".mp4", ".avi"] },
+      { is: "программа", items: [".exe", ".py"] },
+    ] },
+    { id: "kb", title: "Больше или меньше килобайта", from: 7, cats: [
+      { ask: "объёмы больше 1 Кбайт", items: [["2 Кбайт", "2 Кбайт больше 1 Кбайт"], ["9000 бит", "9000 бит = 1125 байт, больше 1024"], ["1 Мбайт", "1 Мбайт = 1024 Кбайт"],
+        ["10 000 бит", "10 000 бит = 1250 байт, больше 1024"], ["0,5 Мбайт", "0,5 Мбайт = 512 Кбайт"], ["16 384 бит", "16 384 бит = 2048 байт = 2 Кбайт"], ["1500 байт", "1500 байт больше 1024 байт"]]
+        .map(([t, why]) => ({ t, why })) },
+      { ask: "объёмы меньше 1 Кбайт", items: [["1000 байт", "1000 байт меньше 1024 байт"], ["8000 бит", "8000 бит = 1000 байт, меньше 1024"], ["512 байт", "512 байт — половина килобайта"],
+        ["4096 бит", "4096 бит = 512 байт"], ["100 байт", "100 байт меньше 1024 байт"], ["0,5 Кбайт", "0,5 Кбайт меньше 1 Кбайт"], ["8 бит", "8 бит = 1 байт"]]
+        .map(([t, why]) => ({ t, why })) },
+    ] },
+    { id: "binpar", title: "Чётность в двоичной системе", from: 8, cats: [
+      { ask: "чётные числа", make() { const n = 2 * rnd(2, 31); return { t: n.toString(2) + sub(2), why: `${n.toString(2)}${sub(2)} = ${n}, чётное: в конце 0` }; } },
+      { ask: "нечётные числа", make() { const n = 2 * rnd(2, 31) + 1; return { t: n.toString(2) + sub(2), why: `${n.toString(2)}${sub(2)} = ${n}, нечётное: в конце 1` }; } },
+    ] },
+    { id: "bases", title: "Сравни с числом 100", from: 8, cats: [
+      { ask: "числа больше 100", make() { const n = rnd(101, 190), t = inBase()(n); return { t, why: `${t} = ${n}, больше 100` }; } },
+      { ask: "числа меньше 100", make() { const n = rnd(33, 99), t = inBase()(n); return { t, why: `${t} = ${n}, меньше 100` }; } },
+    ] },
+    { id: "logic", title: "Истина или ложь", from: 8, cats: [
+      { ask: "выражения, равные 1 (истина)", items: ["1 ∨ 0", "¬0", "0 → 1", "1 ∧ 1", "¬(1 ∧ 0)", "0 → 0", "1 → 1", "¬0 ∧ 1", "0 ∨ ¬0"].map(t => ({ t, why: `${t} = 1` })) },
+      { ask: "выражения, равные 0 (ложь)", items: ["1 ∧ 0", "¬1 ∨ 0", "1 → 0", "0 ∨ 0", "¬1 ∧ 1", "¬(1 ∨ 0)", "0 ∧ 0", "¬(0 → 1)", "1 ∧ ¬1"].map(t => ({ t, why: `${t} = 0` })) },
+    ] },
+    { id: "types", title: "Типы данных в Python", from: 8, cats: [
+      { ask: "целые числа (int)", is: "целое число, int", items: ["5", "-12", "0", "100", "2026"] },
+      { ask: "вещественные числа (float)", is: "вещественное число, float", items: ["3.14", "2.0", "-0.5", "1e3", "0.1"] },
+      { ask: "строки (str)", is: "строка, str: стоит в кавычках", items: ["\"5\"", "'abc'", "\"3.14\"", "'True'", "\"\""] },
+      { is: "логическое значение, bool", items: ["True", "False"] },
+    ] },
+    { id: "pyops", title: "Верно или неверно: Python", from: 9, cats: [
+      { ask: "верные равенства", items: ["7 // 2 == 3", "7 % 2 == 1", "2 ** 3 == 8", "10 % 5 == 0", "len('кот') == 3", "9 // 4 == 2", "15 % 4 == 3"].map(t => ({ t, why: `${t} — верно` })) },
+      { ask: "неверные равенства", items: [["7 // 2 == 3.5", "неверно: // делит нацело, 7 // 2 == 3"], ["7 % 2 == 3", "неверно: % даёт остаток, 7 % 2 == 1"], ["2 ** 3 == 6", "неверно: ** это степень, 2 ** 3 == 8"],
+        ["10 % 3 == 3", "неверно: остаток от 10 на 3 равен 1"], ["len('кот') == 2", "неверно: в строке 'кот' 3 символа"], ["9 // 4 == 3", "неверно: 9 // 4 == 2"]].map(([t, why]) => ({ t, why })) },
+    ] },
+  ],
+  chem: [
+    { id: "simple", title: "Простые и сложные вещества", from: 8, cats: [
+      { ask: "простые вещества", is: "простое вещество: атомы одного элемента", items: ["O₂", "H₂", "N₂", "Cl₂", "O₃", "Fe", "Cu", "S"] },
+      { ask: "сложные вещества", is: "сложное вещество: атомы разных элементов", items: ["H₂O", "CO₂", "NaCl", "CH₄", "NH₃", "HCl", "CaO"] },
+    ] },
+    { id: "metals", title: "Металлы и неметаллы", from: 8, cats: [
+      { ask: "металлы", is: "металл", items: ["Na", "Fe", "Cu", "Al", "Ca", "Zn", "Mg", "K", "Ag"] },
+      { ask: "неметаллы", is: "неметалл", items: ["O", "S", "Cl", "N", "C", "P", "H", "Br", "Si"] },
+    ] },
+    { id: "change", title: "Физические и химические явления", from: 8, cats: [
+      { ask: "химические явления", is: "химическое явление: получается новое вещество", items: ["горение свечи", "ржавление", "скисание молока", "гниение листьев", "горение магния"] },
+      { ask: "физические явления", is: "физическое явление: вещество остаётся тем же", items: ["таяние льда", "кипение воды", "растворение сахара", "измельчение мела", "испарение спирта"] },
+    ] },
+    { id: "classes", title: "Классы веществ", from: 8, cats: [
+      { ask: "оксиды", is: "оксид", items: ["CaO", "CO₂", "SO₃", "Na₂O", "Al₂O₃", "P₂O₅"] },
+      { ask: "кислоты", is: "кислота", items: ["HCl", "H₂SO₄", "HNO₃", "H₃PO₄", "H₂CO₃"] },
+      { ask: "основания", is: "основание", items: ["NaOH", "Ca(OH)₂", "KOH", "Cu(OH)₂", "Fe(OH)₃"] },
+      { ask: "соли", is: "соль", items: ["NaCl", "CaCO₃", "K₂SO₄", "CuSO₄", "AgNO₃", "Na₃PO₄"] },
+    ] },
+    { id: "bond", title: "Вид химической связи", from: 8, cats: [
+      { ask: "вещества с ионной связью", is: "ионная связь: металл и неметалл", items: ["NaCl", "CaO", "KBr", "MgCl₂", "Na₂O"] },
+      { ask: "вещества с ковалентной полярной связью", is: "ковалентная полярная связь: разные неметаллы", items: ["HCl", "H₂O", "NH₃", "CO₂", "H₂S"] },
+      { ask: "вещества с ковалентной неполярной связью", is: "ковалентная неполярная связь: одинаковые неметаллы", items: ["O₂", "N₂", "H₂", "Cl₂", "F₂"] },
+      { ask: "вещества с металлической связью", is: "металлическая связь", items: ["Fe", "Cu", "Al", "Na", "Zn"] },
+    ] },
+    { id: "solub", title: "Растворимость в воде", from: 8, cats: [
+      { ask: "растворимые вещества", is: "растворяется в воде", items: ["NaCl", "KNO₃", "CuSO₄", "Na₂CO₃", "AgNO₃", "BaCl₂", "NaOH"] },
+      { ask: "нерастворимые вещества", is: "в воде не растворяется", items: ["BaSO₄", "AgCl", "CaCO₃", "Cu(OH)₂", "Fe(OH)₃", "BaCO₃", "AgBr"] },
+    ] },
+    { id: "electro", title: "Сильные и слабые электролиты", from: 9, cats: [
+      { ask: "сильные электролиты", is: "сильный электролит", items: ["HCl", "H₂SO₄", "HNO₃", "NaOH", "KOH", "NaCl", "CuSO₄"] },
+      { ask: "слабые электролиты", is: "слабый электролит", items: ["H₂CO₃", "H₂S", "CH₃COOH", "NH₃·H₂O", "H₂O"] },
+    ] },
+    { id: "organic", title: "Классы органических веществ", from: 10, cats: [
+      { ask: "алканы", is: "алкан", items: ["метан", "этан", "пропан", "бутан"] },
+      { ask: "алкены", is: "алкен", items: ["этилен", "пропен", "бутен-1"] },
+      { ask: "спирты", is: "спирт", items: ["метанол", "этанол", "глицерин", "пропанол-1"] },
+      { ask: "карбоновые кислоты", is: "карбоновая кислота", items: ["уксусная кислота", "муравьиная кислота"] },
+      { is: "алкин", items: ["ацетилен", "пропин"] },
+      { is: "арен", items: ["бензол", "толуол"] },
+    ] },
+  ],
+};
+
+const params = new URLSearchParams(location.search);
+const MODE_GRADE = { 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, oge: 9, ege: 11, ege_base: 11 };
+const grade = MODE_GRADE[params.get("mode")] ?? 11;
+const subject = TOPICS[params.get("s")] ? params.get("s") : "phys";
+const topics = TOPICS[subject].filter(t => t.from <= grade);
+
+const KEY = "bubbles:best";
+function loadBest() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+function best(id) { return loadBest()[subject + ":" + id] || 0; }
+function saveBest(id, score) {
+  const all = loadBest();
+  if (score <= (all[subject + ":" + id] || 0)) return false;
+  all[subject + ":" + id] = score;
+  try { localStorage.setItem(KEY, JSON.stringify(all)); } catch {}
+  return true;
+}
+
+// ---------- игра ----------
+
+const NEED = 8, LIVES = 3, FILLS = ["--b1", "--b2", "--b3", "--b4", "--b5"];
+const sea = $("sea");
+let state = null, raf = 0;
+
+// «неверно: 2³ = 8» без самого пузыря читается наоборот, поэтому впереди ставим его текст
+const normal = (cat, x) => typeof x === "string" ? { t: x, why: `${x} — ${cat.is}` } : x.why.startsWith("неверно") ? { ...x, why: `${x.t} — ${x.why}` } : x;
+const make = cat => cat.make ? cat.make() : normal(cat, pick(cat.items));
+
+function newTask() {
+  const s = state, pool = s.topic === "all" ? topics : [topics.find(t => t.id === s.topic)];
+  let topic, target;
+  do { topic = pick(pool); target = pick(topic.cats.filter(c => c.ask)); } while (pool.length * topic.cats.length > 2 && target === s.target);
+  Object.assign(s, { group: topic, target, got: 0, wrongRow: 0, spawnAt: 0, lanes: [], pauseUntil: performance.now() + 1700 });
+  s.bubbles.forEach(b => b.el.remove());
+  s.bubbles = [];
+  $("ask").textContent = "Лопай " + target.ask;
+  const banner = document.createElement("div");
+  banner.className = "banner";
+  banner.innerHTML = `<span>${s.level ? "Отлично! Дальше быстрее" : topic.title}</span><b></b>`;
+  banner.lastChild.textContent = "Лопай " + target.ask;
+  sea.querySelector(".banner")?.remove();
+  sea.append(banner);
+  hud();
+}
+
+function hud() {
+  $("score").textContent = state.score;
+  $("lives").textContent = "❤️".repeat(state.lives) + "🤍".repeat(LIVES - state.lives);
+  $("progress").textContent = `Поймано ${state.got} из ${NEED}` + (state.combo >= 3 ? ` · серия ${state.combo}` : "");
+}
+
+function spawn(now) {
+  const s = state, others = s.group.cats.filter(c => c !== s.target);
+  const right = s.wrongRow >= 2 || Math.random() < 0.45;
+  s.wrongRow = right ? 0 : s.wrongRow + 1;
+  const cat = right ? s.target : pick(others), item = make(cat);
+  if (s.bubbles.some(b => !b.dead && b.item.t === item.t)) return false;  // два одинаковых пузыря на экране путают
+  const el = document.createElement("div"), long = item.t.length > 9;
+  // Дорожки: пузырь не шире дорожки и не встаёт в две последние занятые, поэтому надписи не закрывают друг друга
+  const w = sea.clientWidth, lanes = Math.max(3, Math.floor(w / 124)), laneW = w / lanes;
+  const size = Math.round(Math.max(66, Math.min(132, laneW - 8, 40 + item.t.length * (long ? 6 : 10))));
+  el.className = "bubble" + (long ? " small" : "");
+  el.textContent = item.t;
+  el.style.width = el.style.height = size + "px";
+  el.style.setProperty("--fill", `var(${pick(FILLS)})`);
+  const free = Array.from({ length: lanes }, (_, i) => i).filter(i => !s.lanes.slice(-Math.min(2, lanes - 1)).includes(i)), lane = pick(free);
+  s.lanes.push(lane);
+  const x = lane * laneW + (laneW - size) * Math.random();
+  const b = { el, item, right, size, x, y: sea.clientHeight + 4, speed: 46 + s.level * 7, phase: Math.random() * 6, born: now };
+  el.addEventListener("pointerdown", e => { e.preventDefault(); hit(b); });
+  sea.append(el);
+  s.bubbles.push(b);
+  return true;
+}
+
+function hit(b) {
+  const s = state;
+  if (!s || b.dead) return;
+  b.dead = true;
+  if (b.right) {
+    s.combo++; s.got++;
+    s.score += 1 + Math.floor(s.combo / 5);
+    b.el.classList.add("pop");
+    if (performance.now() > s.hintUntil) {  // объяснение ошибки не стираем сразу: его надо успеть прочитать
+      $("hint").className = "hint ok";
+      $("hint").textContent = s.combo % 5 === 0 ? `Серия ${s.combo}! Очки растут` : "";
+    }
+  } else {
+    s.combo = 0; s.lives--;
+    s.errors.set(b.item.t, b.item.why);
+    b.el.classList.add("miss");
+    $("hint").className = "hint";
+    $("hint").textContent = b.item.why;
+    s.hintUntil = performance.now() + 3500;
+    try { navigator.vibrate?.(60); } catch {}
+  }
+  setTimeout(() => b.el.remove(), 520);
+  hud();
+  if (s.lives <= 0) return finish();
+  if (s.got >= NEED) { s.level++; newTask(); }
+}
+
+function tick(now) {
+  const s = state;
+  if (!s) return;
+  raf = requestAnimationFrame(tick);
+  const dt = Math.min(0.05, (now - s.last) / 1000);  // после паузы вкладки пузыри не прыгают
+  s.last = now;
+  if (now < s.pauseUntil) return;
+  sea.querySelector(".banner")?.remove();
+  if (now >= s.spawnAt) s.spawnAt = now + (spawn(now) ? Math.max(520, 1150 - s.level * 60) : 120);  // не вышло — скоро пробуем другой пузырь
+  for (const b of s.bubbles) {
+    if (!b.dead) b.y -= b.speed * dt;
+    const sway = Math.sin(now / 700 + b.phase) * 4;
+    b.el.style.transform = `translate(${Math.max(0, Math.min(sea.clientWidth - b.size, b.x + sway))}px, ${b.y}px)`;
+    if (!b.dead && b.y < -b.size) {
+      b.dead = true; b.el.remove();
+      if (b.right && s.combo) { s.combo = 0; hud(); }  // упущенный нужный пузырь обрывает серию
+    }
+  }
+  s.bubbles = s.bubbles.filter(b => !b.dead || b.el.isConnected);
+}
+
+function start(topic) {
+  state = { topic, score: 0, lives: LIVES, combo: 0, level: 0, bubbles: [], errors: new Map(), last: performance.now(), target: null, hintUntil: 0 };
+  show("game");
+  $("hint").textContent = "";
+  $("quit").textContent = "← Темы";
+  newTask();
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(tick);
+}
+
+function stop() {
+  cancelAnimationFrame(raf);
+  state?.bubbles.forEach(b => b.el.remove());
+  sea.querySelector(".banner")?.remove();
+}
+
+function finish() {
+  const s = state;
+  stop();
+  state = null;
+  const record = saveBest(s.topic, s.score);
+  $("final").textContent = `${s.score} ${plural(s.score, "очко", "очка", "очков")}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${best(s.topic)}`;
+  $("errors").replaceChildren(...[...s.errors.values()].map(why => { const li = document.createElement("li"); li.textContent = why; return li; }));
+  $("errbox").hidden = !s.errors.size;
+  $("again").onclick = () => start(s.topic);
+  show("over");
+}
+
+function plural(n, one, few, many) {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
+}
+
+function show(id) {
+  for (const x of ["home", "game", "over"]) $(x).hidden = x !== id;
+  scrollTo(0, 0);
+}
+
+function home() {
+  stop();
+  state = null;
+  $("all").textContent = "🎲 Все темы подряд" + (best("all") ? ` · рекорд ${best("all")}` : "");
+  $("topics").replaceChildren(...topics.map(t => {
+    const b = document.createElement("button");
+    b.className = "topic";
+    b.innerHTML = `<span></span><small>${best(t.id) ? "рекорд " + best(t.id) : "ещё не играл"}</small>`;
+    b.firstChild.textContent = t.title;
+    b.addEventListener("click", () => start(t.id));
+    return b;
+  }));
+  show("home");
+}
+
+$("all").addEventListener("click", () => start("all"));
+$("quit").addEventListener("click", home);
+$("menu").addEventListener("click", home);
+document.addEventListener("visibilitychange", () => { if (state) state.last = performance.now(); });
+home();
+</script>
+</body>
+</html>
