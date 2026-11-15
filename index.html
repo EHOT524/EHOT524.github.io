@@ -134,7 +134,8 @@ button.main { background: var(--accent); color: var(--accent-ink); }
 const num = (x, d = 1) => x.toFixed(d).replace(".", ",");
 const smart = x => num(x, Math.abs(x) >= 100 ? 0 : Math.abs(x) >= 10 ? 1 : 2);
 const $ = id => document.getElementById(id);
-$("tabs").hidden = new URLSearchParams(location.search).get("exam") !== "ege";  // вкладка с заданием 26 только для ЕГЭ
+const EGE = new URLSearchParams(location.search).get("exam") === "ege";
+$("tabs").hidden = !EGE;  // вкладка с заданием 26 только для ЕГЭ
 const shown = n => String(n).replace(".", ",");
 const parse = text => Number(text.trim().replace(",", "."));
 const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
@@ -531,6 +532,15 @@ function blocks(v, t) {
     const time = a ? Math.min((t * fast) % (tau + fast), tau) : 0;  // доехали, секунду стоим, снова с начала
     return { atwood: true, a, T, tau, end: Math.abs(a) * tau, share: a ? Math.sign(a) * Math.abs(a) * time * time / 2 / v.ha : 0, fast };
   }
+  if (v.kind === "complex") {
+    // k — во сколько раз противовес проходит больше груза. Из энергии: a = g(Σk·m₁ − M) / (M + Σk²·m₁)
+    const ks = v.scheme === "two" ? [1, 1] : [v.scheme === "chain2" ? 4 : 8];
+    const K = ks.reduce((s, k) => s + k, 0), K2 = ks.reduce((s, k) => s + k * k, 0), kmax = Math.max(...ks);
+    const pull = K * v.mc - v.m, a = Math.abs(pull) < 1e-9 ? 0 : g * pull / (v.m + K2 * v.mc);
+    const aw = kmax * Math.abs(a), tau = a ? Math.sqrt(2 / aw) : 0, fast = Math.max(1, tau / 4);  // противовес проходит 1 м
+    const time = a ? Math.min((t * fast) % (tau + fast), tau) : 0;
+    return { complex: true, a, kmax, need: v.m / K, T: v.mc * (g - kmax * a), share: a ? Math.sign(a) * aw * time * time / 2 : 0 };
+  }
   const n = v.kind === "fixed" ? 1 : 2, mb = n === 1 ? 0 : v.mb, F = (v.m + mb) * g / n, s = n * v.hh;
   return { n, F, s, A: F * s, useful: v.m * g * v.hh, eta: v.m / (v.m + mb), share: 0.5 - 0.5 * Math.cos(2 * Math.PI * t / 5) };
 }
@@ -581,6 +591,47 @@ function drawBlocks(w, h, v, r) {
     pulley(cx, cy, R);
     label(r.a ? `тяжёлый опускается, a = ${smart(Math.abs(r.a))} м/с²` : "грузы равны: стоят на месте", 10, h - 7, ink, 12);
     label("— mg", w - 74, top + 22, color("--hit"), 11); label("— T", w - 74, top + 38, color("--good"), 11);
+    return;
+  }
+  if (r.complex) {
+    const Rc = Math.max(9, Math.min(16, h * 0.05)), sz = Math.max(16, Math.min(28, h * 0.1)), Ac = h * 0.1;
+    const arcR = (x, y, a, b) => { ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, Rc, a, b); ctx.stroke(); };
+    const fy = top + Rc + 8, k = Ac / Math.max(v.m, v.mc) / v.g;
+    const hang = (x, y, mass, name, left) => {
+      weight(x, y, sz, "");
+      label(name, left ? x - sz / 2 - 6 - name.length * 8 : x + sz / 2 + 6, y + sz / 2 + 4, color("--muted"), 12);
+      arrow(x, y + sz / 2, x, y + sz / 2 + mass * v.g * k, color("--hit"), 2);
+    };
+    if (v.scheme === "two") {
+      // Груз на подвижном блоке, концы верёвки через два неподвижных блока к двум противовесам
+      const qmin = fy + 2 * Rc + 6, qmax = floor - Ac - sz - 6 - Rc, D = Math.max(4, (qmax - qmin) / 2), qmid = (qmin + qmax) / 2;
+      const move = r.share * D, qy = qmid - move, cw = qmid - sz / 2 + move, lx = cx - 2 * Rc, rx = cx + 2 * Rc;
+      for (const x of [lx, rx]) { rope(x, top, x, fy); arcR(x, fy, Math.PI, 0); }
+      rope(lx - Rc, fy, lx - Rc, cw); rope(rx + Rc, fy, rx + Rc, cw);
+      rope(lx + Rc, fy, lx + Rc, qy); rope(rx - Rc, fy, rx - Rc, qy); arcR(cx, qy, 0, Math.PI);
+      rope(cx, qy, cx, qy + Rc + 6);
+      pulley(lx, fy, Rc); pulley(rx, fy, Rc); pulley(cx, qy, Rc);
+      hang(cx, qy + Rc + 6, v.m, "M"); hang(lx - Rc, cw, v.mc, "m₁", true); hang(rx + Rc, cw, v.mc, "m₁");
+    } else {
+      // Цепочка: ось каждого подвижного блока тянет верёвку следующего, поэтому сила удваивается на каждом
+      const n = v.scheme === "chain2" ? 2 : 3, gap = 2 * Rc + 8, x0 = Math.max(Rc + sz + 34, cx - 2 * Rc);
+      const y1max = floor - Ac - sz - 6 - Rc - (n - 1) * gap, y1min = fy + 2 * Rc + 6;
+      const D = Math.max(4, Math.min(h * 0.25, y1max - y1min, (floor - Ac - sz - fy - Rc - 4) / 2));
+      const move = r.share * D, cw = fy + Rc + 4 + D + move;  // противовес вниз на move, груз вверх в 2ⁿ раз меньше
+      const qs = Array.from({ length: n }, (_, i) => ({ x: x0 + 2 * Rc + i * Rc, y: (y1min + y1max) / 2 + i * gap - move / 2 ** (i + 1) }));
+      rope(x0, top, x0, fy); arcR(x0, fy, Math.PI, 0);
+      rope(x0 - Rc, fy, x0 - Rc, cw); rope(x0 + Rc, fy, x0 + Rc, qs[0].y);
+      qs.forEach((q, i) => {
+        arcR(q.x, q.y, 0, Math.PI);
+        rope(q.x + Rc, q.y, q.x + Rc, top);
+        if (i) rope(qs[i - 1].x, qs[i - 1].y, qs[i - 1].x, q.y);
+      });
+      const last = qs[n - 1];
+      rope(last.x, last.y, last.x, last.y + Rc + 6);
+      pulley(x0, fy, Rc); qs.forEach(q => pulley(q.x, q.y, Rc));
+      hang(last.x, last.y + Rc + 6, v.m, "M"); hang(x0 - Rc, cw, v.mc, "m₁", true);
+    }
+    label(!r.a ? "Равновесие: система стоит" : r.a > 0 ? "Противовес тяжелее: груз M поднимается" : "Груз M тяжелее: он опускается", 10, h - 7, ink, 12);
     return;
   }
   const total = (v.m + (r.n === 1 ? 0 : v.mb)) * v.g, k = A / Math.max(total, r.F), p = r.share;
@@ -799,31 +850,41 @@ const SIMS = {
     title: "Блоки", section: "Механика", brief: "Подвижный, неподвижный и машина Атвуда", live: true,
     fields: [
       { id: "m", label: "Масса груза", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 10, when: v => v.kind !== "atwood" },
+      { id: "mc", label: "Масса противовеса m₁", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 4, when: v => v.kind === "complex" },
       { id: "m1", label: "Масса левого груза m₁", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 10, when: v => v.kind === "atwood" },
       { id: "m2", label: "Масса правого груза m₂", unit: "кг", min: 0.1, max: 50, step: 0.1, value: 6, when: v => v.kind === "atwood" },
       { id: "mb", label: "Масса подвижного блока", unit: "кг", min: 0, max: 5, step: 0.1, value: 0, when: v => v.kind === "moving" || v.kind === "both" },
-      { id: "hh", label: "На сколько поднимаем груз", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind !== "atwood" },
+      { id: "hh", label: "На сколько поднимаем груз", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind !== "atwood" && v.kind !== "complex" },
       { id: "ha", label: "Путь, который проходят грузы", unit: "м", min: 0.1, max: 10, step: 0.1, value: 1, when: v => v.kind === "atwood" },
     ],
     selects: [
-      { id: "kind", label: "Какой блок", first: true, options: [["fixed", "Неподвижный"], ["moving", "Подвижный, тянем вверх"], ["both", "Подвижный и неподвижный, тянем вниз"], ["atwood", "Два груза на блоке (машина Атвуда)"]] },
+      { id: "kind", label: "Какой блок", first: true, options: [["fixed", "Неподвижный"], ["moving", "Подвижный, тянем вверх"], ["both", "Подвижный и неподвижный, тянем вниз"], ["atwood", "Два груза на блоке (машина Атвуда)"],
+        ...(EGE ? [["complex", "Сложная система: уравновесь груз"]] : [])] },
+      { id: "scheme", label: "Схема", first: true, when: v => v.kind === "complex", options: [["two", "Подвижный блок и два противовеса"],
+        ["chain2", "Два подвижных блока цепочкой"], ["chain3", "Три подвижных блока цепочкой"]] },
       { id: "g", label: "Где находится", options: PLANETS, number: true },
     ],
     compute: blocks,
-    reads: r => r.atwood
+    reads: r => r.complex
+      ? [["Равновесие при m₁", smart(r.need) + " кг"], ["Ускорение груза M", smart(Math.abs(r.a)) + " м/с²"],
+         ["Ускорение противовеса", smart(Math.abs(r.a) * r.kmax) + " м/с²"], ["Натяжение у противовеса", smart(r.T) + " Н"]]
+      : r.atwood
       ? [["Ускорение грузов", smart(Math.abs(r.a)) + " м/с²"], ["Натяжение нити", smart(r.T) + " Н"],
          ["Время на путь", r.a ? smart(r.tau) + " с" : "стоят"], ["Скорость в конце", r.a ? smart(r.end) + " м/с" : "0 м/с"]]
       : [["Сила тяги", smart(r.F) + " Н"], ["Вытянули верёвки", smart(r.s) + " м"], ["Работа A = F · s", smart(r.A) + " Дж"], ["КПД", num(r.eta * 100, 0) + "%"]],
     draw: drawBlocks, describe: "Груз на блоках и силы, которые на него действуют",
     formulas: ["F = mg — неподвижный блок", "F = (m + mбл) · g / 2 — подвижный блок", "s = 2h — подвижный блок",
-      "η = Aпол / Aзатр = mgh / (F · s)", "a = (m₁ − m₂) · g / (m₁ + m₂)", "T = 2m₁m₂g / (m₁ + m₂)"],
+      "η = Aпол / Aзатр = mgh / (F · s)", "a = (m₁ − m₂) · g / (m₁ + m₂)", "T = 2m₁m₂g / (m₁ + m₂)",
+      ...(EGE ? ["M = 2ⁿ · m₁ — n подвижных блоков цепочкой", "aпротивовеса = 2ⁿ · aгруза — связь ускорений"] : [])],
     remark: "Верёвка невесомая и не растягивается, трения в осях нет. Неподвижный блок выигрыша в силе не даёт, только меняет её направление. "
       + "Подвижный блок даёт выигрыш в силе в 2 раза, но верёвку приходится вытянуть вдвое длиннее, поэтому работа та же: "
       + "это «золотое правило» механики, выигрыша в работе не даёт ни один механизм. Если блок сам что-то весит, часть работы уходит на его подъём и КПД меньше 100%.",
     tasks: ["Подними один и тот же груз неподвижным и подвижным блоком. Во сколько раз отличается сила?",
       "Подними груз на 2 м подвижным блоком. Сколько метров верёвки ты вытянул? Сравни работу с mgh.",
       "Дай подвижному блоку массу 1 кг. Как изменился КПД?",
-      "В машине Атвуда сделай грузы равными, а потом один втрое тяжелее. Как изменилось ускорение?"],
+      "В машине Атвуда сделай грузы равными, а потом один втрое тяжелее. Как изменилось ускорение?",
+      ...(EGE ? ["Сложная система, три подвижных блока: подбери m₁, чтобы удержать груз 40 кг. Во сколько раз ускорение противовеса больше ускорения груза?",
+        "Схема с двумя противовесами: M = 10 кг, m₁ = 6 кг. Найди ускорение груза сам, потом сверься с опытом."] : [])],
   },
   gaz: {
     title: "Изопроцессы в газе", section: "Молекулярная физика", brief: "Давление, объём и температура", live: true,
@@ -934,7 +995,7 @@ const SIMS = {
 // Масштаб: те же опыты, но пределы ползунков в 10 и 100 раз больше. Вписанное большое число включает его само
 const GROW = {
   mayatnik: ["l", "m", "k", "x"], arhimed: ["rho", "vol"], gaz: ["nu", "T", "V", "p"], om: ["emf", "inner", "r1", "r2"],
-  linza: ["F", "d", "h"], raspad: ["n", "half"], bloki: ["m", "m1", "m2", "mb", "hh", "ha"],
+  linza: ["F", "d", "h"], raspad: ["n", "half"], bloki: ["m", "mc", "m1", "m2", "mb", "hh", "ha"],
 };
 Object.entries(GROW).forEach(([key, ids]) => {
   const sim = SIMS[key], fields = sim.fields.filter(f => ids.includes(f.id));
