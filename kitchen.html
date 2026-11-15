@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: собери формулу из ингредиентов на тарелке.">
+<title>Кухня формул</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Те же цвета и шрифты, что у опытов и остальных игр: лист миллиметровки. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f;
+  --wood: #f3e3cc; --wood-edge: #dcc29c; --plate: #ffffff; --plate-rim: #c9d6e4; --chip: #fff7e6; --chip-edge: #e0b56a; --op: #e8f0fb; --op-edge: #9db7d6;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --wood: #2c2418; --wood-edge: #4a3b25; --plate: #1c2b3a; --plate-rim: #3a5068; --chip: #4a3a1c; --chip-edge: #8a6a2c; --op: #223549; --op-edge: #46627f;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c;
+  --wood: #2c2418; --wood-edge: #4a3b25; --plate: #1c2b3a; --plate-rim: #3a5068; --chip: #4a3a1c; --chip-edge: #8a6a2c; --op: #223549; --op-edge: #46627f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 32px; display: grid; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 16px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: 0.45; cursor: default; }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.back { background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hud { display: flex; gap: 14px; align-items: center; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+.lives { letter-spacing: 2px; }
+.task { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px; }
+.task span { color: var(--muted); font-size: 13px; }
+.task b { font-size: 19px; line-height: 1.25; }
+.kitchen { display: grid; gap: 14px; padding: 16px 12px; border: 1px solid var(--wood-edge); border-radius: 6px; background: var(--wood);
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.plate { min-height: 132px; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 6px; padding: 18px 20px;
+  background: var(--plate); border: 6px solid var(--plate-rim); border-radius: 80px; box-shadow: 0 3px 0 #00000014; }
+.plate.ok { border-color: var(--good); }
+.plate.bad { border-color: var(--hit); }
+.lhs { font: 500 20px var(--mono); margin-right: 2px; }
+.empty { color: var(--muted); font-size: 14px; }
+.table { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 104px; align-content: center; }
+.chip { min-width: 46px; height: 46px; padding: 0 12px; border-radius: 23px; border: 1px solid var(--chip-edge); border-bottom-width: 4px; background: var(--chip); color: var(--ink);
+  font: 500 19px/1 var(--mono); display: inline-grid; place-items: center; cursor: pointer; }
+.chip.op { background: var(--op); border-color: var(--op-edge); font-size: 24px; font-weight: 600; }
+.chip.used { visibility: hidden; }
+.plate .chip { height: 42px; min-width: 40px; padding: 0 10px; }
+.hint { min-height: 24px; font-weight: 600; text-align: center; color: var(--hit); }
+.hint.ok { color: var(--good); }
+.hint small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.big { font: 700 44px var(--display); }
+.errors { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row button { flex: 1 1 140px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Кухня формул</h1>
+    <p class="lead" style="margin-top:8px">Тебе называют блюдо, например «Кинетическая энергия». Собери его формулу на тарелке из ингредиентов: букв, чисел и знаков. На столе есть лишние. Ошибся — минус жизнь, жизней три.</p>
+  </header>
+  <button class="main" id="go">🍳 Начать готовить</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden>Для этого режима рецептов пока нет.</p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">← Назад</button>
+    <div class="hud"><span id="score"></span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="task"><span id="num"></span><b id="ask"></b></div>
+  <div class="kitchen">
+    <div class="plate" id="plate"></div>
+    <div class="table" id="table"></div>
+  </div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+  <div class="row"><button class="main" id="serve">🍽 Подать</button><button id="clear">Убрать всё</button></div>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Кухня закрыта</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="dishes"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Правильные рецепты</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script>
+"use strict";
+function telegram(event, data = {}) {
+  try {
+    if (window.TelegramWebviewProxy) window.TelegramWebviewProxy.postEvent(event, JSON.stringify(data));
+    else if (window.parent !== window) window.parent.postMessage(JSON.stringify({ eventType: event, eventData: data }), "*");
+  } catch {}
+}
+telegram("web_app_ready");
+telegram("web_app_expand");
+
+const $ = id => document.getElementById(id);
+const pick = list => list[Math.floor(Math.random() * list.length)];
+const shuffle = list => { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const params = new URLSearchParams(location.search);
+const subject = ["phys", "math", "info", "chem"].includes(params.get("s")) ? params.get("s") : "phys";
+const mode = params.get("mode");
+
+// ---------- формулы ----------
+// Рецепты берутся из справочника бота (ref-<предмет>.js). В игру идут только формулы вида «буква = выражение»
+// из букв, чисел, знаков · / + − и скобок: такие можно честно проверить подстановкой чисел.
+
+const TOKEN = /^\s*(\d+(?:,\d+)?|[A-Za-zА-Яа-яёΑ-Ωα-ωℰ][A-Za-zА-Яа-яё₀-₉ₐₙ]*[²³]?|[·\/+−()])/u;
+const OPS = "·/+−()";
+
+function tokenize(src) {
+  const out = [];
+  for (let rest = src; rest.trim(); ) {
+    const m = rest.match(TOKEN);
+    if (!m) return null;
+    out.push(m[1]);
+    rest = rest.slice(m[0].length);
+  }
+  return out;
+}
+
+const isOp = t => OPS.includes(t), isNum = t => /^\d/.test(t);
+const base = t => t.replace(/[²³]$/, "");
+
+// Считает выражение из плиток. Буквам даются случайные числа из vars. Неправильная запись бросает ошибку.
+function evaluate(tokens, vars) {
+  let i = 0;
+  const value = name => { if (!vars.has(name)) vars.set(name, 0.6 + Math.random() * 2.4); return vars.get(name); };
+  const atom = () => {
+    const t = tokens[i++];
+    if (t === undefined) throw new Error("конец");
+    if (t === "(") { const v = sum(); if (tokens[i++] !== ")") throw new Error("скобка"); return v; }
+    if (isOp(t)) throw new Error("знак");
+    if (isNum(t)) return Number(t.replace(",", "."));
+    const power = t.endsWith("²") ? 2 : t.endsWith("³") ? 3 : 1;
+    return value(base(t)) ** power;
+  };
+  const unary = () => tokens[i] === "−" ? (i++, -unary()) : atom();
+  const product = () => { let v = unary(); while (tokens[i] === "·" || tokens[i] === "/") v = tokens[i++] === "·" ? v * unary() : v / unary(); return v; };
+  function sum() { let v = product(); while (tokens[i] === "+" || tokens[i] === "−") v = tokens[i++] === "+" ? v + product() : v - product(); return v; }
+  const v = sum();
+  if (i < tokens.length) throw new Error("лишнее");
+  return v;
+}
+
+// Совпадают ли два выражения: три раза подставляем одни и те же случайные числа в оба
+function same(a, b) {
+  for (let k = 0; k < 3; k++) {
+    const vars = new Map(), x = evaluate(a, vars), y = evaluate(b, vars);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x - y) > 1e-9 * Math.max(1, Math.abs(x), Math.abs(y))) return false;
+  }
+  return true;
+}
+
+let RECIPES = [];
+function buildRecipes(data) {
+  const ok = x => !mode || !data.modes[mode] || x.m.includes(mode);
+  RECIPES = data.formulas.filter(ok).map(f => {
+    const cut = f.e.indexOf(" = ");
+    if (cut < 0 || f.e.indexOf(" = ", cut + 1) >= 0) return null;  // равенство должно быть одно
+    const lhs = tokenize(f.e.slice(0, cut)), rhs = tokenize(f.e.slice(cut + 3));
+    if (!lhs || !rhs || lhs.length !== 1 || isOp(lhs[0]) || isNum(lhs[0]) || rhs.length < 3 || rhs.length > 9) return null;
+    if (rhs.some((t, k) => !isOp(t) && !isNum(t) && rhs[k + 1] === "(")) return null;  // F (b), sin (α + β) — это не умножение
+    if (rhs.some(t => /^(sin|cos|tg|ctg|log|lg|ln)/.test(t))) return null;
+    try { if (!same(rhs, rhs)) return null; } catch { return null; }
+    return { ...f, lhs: lhs[0], rhs };
+  }).filter(Boolean).sort((a, b) => a.rhs.length - b.rhs.length);
+}
+
+// Лишние плитки: буквы из соседних формул раздела, та же буква с квадратом или без, недостающий знак
+function tiles(r) {
+  const have = new Set(r.rhs.map(base)), extra = [];
+  const others = shuffle(RECIPES.filter(x => x.t === r.t && x !== r).flatMap(x => x.rhs).filter(t => !isOp(t) && !isNum(t) && !have.has(base(t)) && base(t) !== base(r.lhs)));
+  for (const t of others) if (extra.length < 2 && !extra.some(x => base(x) === base(t))) extra.push(t);
+  const letters = r.rhs.filter(t => !isOp(t) && !isNum(t));
+  if (letters.length) {
+    const t = pick(letters), twin = t === base(t) ? t + "²" : base(t);
+    if (!r.rhs.includes(twin)) extra.push(twin);
+  }
+  const op = ["/", "·", "+", "−"].find(o => !r.rhs.includes(o));
+  if (op) extra.push(op);
+  return shuffle([...r.rhs, ...extra]);
+}
+
+const KEY = "kitchen:best";
+function best() { try { return (JSON.parse(localStorage.getItem(KEY)) || {})[subject] || 0; } catch { return 0; } }
+function saveBest(score) {
+  if (score <= best()) return false;
+  try { localStorage.setItem(KEY, JSON.stringify({ ...(JSON.parse(localStorage.getItem(KEY)) || {}), [subject]: score })); } catch {}
+  return true;
+}
+
+// ---------- игра ----------
+
+const LIVES = 3;
+let state = null;
+
+function nextRecipe() {
+  const s = state, limit = 3 + s.dishes;  // сначала короткие формулы, потом длиннее
+  let pool = RECIPES.filter(r => !s.used.has(r.id) && r.rhs.length <= limit);
+  if (!pool.length) pool = RECIPES.filter(r => !s.used.has(r.id));
+  if (!pool.length) { s.used.clear(); pool = RECIPES; }
+  const longest = Math.max(...pool.map(r => r.rhs.length)), r = pick(pool.filter(x => x.rhs.length >= longest - 2));
+  s.used.add(r.id);
+  return r;
+}
+
+function deal() {
+  const s = state;
+  s.recipe = nextRecipe();
+  s.tiles = tiles(s.recipe).map(t => ({ t, used: false }));
+  s.plate = [];
+  s.done = false;
+  $("num").textContent = `Блюдо № ${s.dishes + 1}. Приготовь:`;
+  $("ask").textContent = s.recipe.n;
+  $("hint").textContent = "";
+  $("plate").className = "plate";
+  $("serve").textContent = "🍽 Подать";
+  $("clear").disabled = false;
+  draw();
+}
+
+function chip(text, onTap, cls = "") {
+  const b = document.createElement("div");
+  b.className = "chip " + (isOp(text) ? "op " : "") + cls;
+  b.textContent = text;
+  if (onTap) b.addEventListener("pointerdown", e => { e.preventDefault(); if (!state.done) onTap(); });
+  return b;
+}
+
+function draw() {
+  const s = state, plate = $("plate");
+  const lhs = document.createElement("span");
+  lhs.className = "lhs";
+  lhs.textContent = s.recipe.lhs + " =";
+  const placed = s.plate.map((k, pos) => chip(s.tiles[k].t, () => { s.tiles[k].used = false; s.plate.splice(pos, 1); draw(); }));
+  const empty = document.createElement("span");
+  empty.className = "empty";
+  empty.textContent = "нажимай на ингредиенты по порядку";
+  plate.replaceChildren(lhs, ...(placed.length ? placed : [empty]));
+  $("table").replaceChildren(...s.tiles.map((x, k) => chip(x.t, () => { x.used = true; s.plate.push(k); draw(); }, x.used ? "used" : "")));
+  $("score").textContent = `★ ${s.score}`;
+  $("lives").textContent = "❤️".repeat(s.lives) + "🤍".repeat(LIVES - s.lives);
+  $("serve").disabled = !s.done && !s.plate.length;
+}
+
+function serve() {
+  const s = state;
+  if (s.done) return s.lives > 0 ? deal() : finish();
+  if (!s.plate.length) return;
+  const r = s.recipe, made = s.plate.map(k => s.tiles[k].t);
+  let ok = false, broken = false;
+  try { ok = same(made, r.rhs); } catch { broken = true; }
+  s.done = true;
+  const hint = $("hint");
+  if (ok) {
+    s.streak++; s.dishes++;
+    const bonus = Math.min(s.streak - 1, 5);
+    s.score += 10 + bonus;
+    $("plate").className = "plate ok";
+    hint.className = "hint ok";
+    hint.textContent = "😋 Вкусно! +" + (10 + bonus) + (bonus ? ` (серия ${s.streak})` : "");
+  } else {
+    s.streak = 0; s.lives--;
+    s.errors.set(r.id, `${r.n}: ${r.e}`);
+    $("plate").className = "plate bad";
+    hint.className = "hint";
+    hint.textContent = (broken ? "Так формулу не записать: проверь знаки. " : "Это другое блюдо. ") + "Рецепт: " + r.e;
+    try { navigator.vibrate?.(60); } catch {}
+  }
+  if (r.l) { const small = document.createElement("small"); small.textContent = r.l; hint.append(small); }
+  $("serve").textContent = s.lives > 0 ? "Дальше →" : "Итоги";
+  $("clear").disabled = true;
+  draw();
+}
+
+function start() {
+  state = { score: 0, lives: LIVES, dishes: 0, streak: 0, used: new Set(), errors: new Map() };
+  show("game");
+  deal();
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  const record = saveBest(s.score);
+  $("final").textContent = `${s.score} ${plural(s.score, "очко", "очка", "очков")}`;
+  $("dishes").textContent = `Приготовлено: ${s.dishes} ${plural(s.dishes, "блюдо", "блюда", "блюд")}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${best()}`;
+  $("errors").replaceChildren(...[...s.errors.values()].map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
+  $("errbox").hidden = !s.errors.size;
+  show("over");
+}
+
+function plural(n, one, few, many) {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
+}
+
+function show(id) {
+  for (const x of ["home", "game", "over"]) $(x).hidden = x !== id;
+  scrollTo(0, 0);
+}
+
+function home() {
+  state = null;
+  const enough = RECIPES.length >= 4;
+  $("go").hidden = !enough;
+  $("none").hidden = enough;
+  $("record").textContent = best() ? `Рекорд: ${best()}` : "";
+  show("home");
+}
+
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("serve").addEventListener("click", serve);
+$("clear").addEventListener("click", () => { state.tiles.forEach(x => { x.used = false; }); state.plate = []; draw(); });
+$("quit").addEventListener("click", home);
+$("menu").addEventListener("click", home);
+
+const loader = document.createElement("script");
+loader.src = `ref-${subject}.js`;
+loader.onload = () => { buildRecipes(REF_DATA); home(); };
+loader.onerror = () => { $("go").hidden = true; $("none").hidden = false; $("none").textContent = "Не получилось загрузить рецепты. Проверь интернет и открой игру ещё раз."; };
+document.head.append(loader);
+</script>
+</body>
+</html>
