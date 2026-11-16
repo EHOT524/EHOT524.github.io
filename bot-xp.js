@@ -43,7 +43,7 @@ const BotXP = (() => {
     el.hidden = !n;
     el.disabled = false;
     el.textContent = "🍎 Забрать опыт в боте";
-    el.onclick = () => { el.disabled = true; el.textContent = "Открываю бота…"; claim(game, subject); };
+    el.onclick = () => { el.disabled = true; el.textContent = "✅ Передано в бота"; claim(game, subject); };
   }
 
   return { add, pending, claim, button, hash };
