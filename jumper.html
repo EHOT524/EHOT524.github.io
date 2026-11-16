@@ -112,9 +112,11 @@ button.main { background: var(--accent); color: var(--accent-ink); }
     <h2>Где ошибся</h2>
     <ul class="errors" id="errors"></ul>
   </section>
+  <div class="row"><button id="claim" hidden></button></div>
   <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
 </main>
 
+<script src="bot-xp.js"></script>
 <script>
 "use strict";
 function telegram(event, data = {}) {
@@ -363,6 +365,8 @@ function finish() {
   $("errors").replaceChildren(...[...s.errors.values()].map(text => { const li = document.createElement("li"); li.textContent = text; return li; }));
   $("errbox").hidden = !s.errors.size;
   $("again").onclick = () => start(s.kind);
+  BotXP.add("j", subject, s.height);
+  BotXP.button($("claim"), "j", subject);
   show("over");
 }
 
