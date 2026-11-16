@@ -110,9 +110,11 @@ button.main { background: var(--accent); color: var(--accent-ink); }
     <h2>Где ошибся</h2>
     <ul class="errors" id="errors"></ul>
   </section>
+  <div class="row"><button id="claim" hidden></button></div>
   <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Темы</button></div>
 </main>
 
+<script src="bot-xp.js"></script>
 <script>
 "use strict";
 function telegram(event, data = {}) {
@@ -448,7 +450,7 @@ function hit(b) {
   if (!s || b.dead) return;
   b.dead = true;
   if (b.right) {
-    s.combo++; s.got++;
+    s.combo++; s.got++; s.pops = (s.pops || 0) + 1;
     s.score += 1 + Math.floor(s.combo / 5);
     b.el.classList.add("pop");
     if (performance.now() > s.hintUntil) {  // объяснение ошибки не стираем сразу: его надо успеть прочитать
@@ -517,6 +519,8 @@ function finish() {
   $("errors").replaceChildren(...[...s.errors.values()].map(why => { const li = document.createElement("li"); li.textContent = why; return li; }));
   $("errbox").hidden = !s.errors.size;
   $("again").onclick = () => start(s.topic);
+  BotXP.add("b", subject, s.pops || 0);
+  BotXP.button($("claim"), "b", subject);
   show("over");
 }
 
