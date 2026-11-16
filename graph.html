@@ -102,6 +102,7 @@ svg.plot { display: block; width: 100%; height: auto; background: var(--sheet); 
   </section>
 </main>
 
+<script src="bot-xp.js"></script>
 <script>
 "use strict";
 function telegram(event, data = {}) {
@@ -576,7 +577,10 @@ function finale(note = "") {
     $("panel").insertAdjacentHTML("beforeend", `
       <p class="msg ${ok ? "ok" : "bad"}">${ok ? "Верно!" : "Неверно."} Это <span class="formula">${round.fn.text}</span>.</p>
       <p>Звёзд за раунд: ${round.stars} из 5. ${praise}</p>
-      <div class="row"><button class="main" type="button" id="again">Ещё раунд</button><button type="button" id="tolevels">К уровням</button></div>`);
+      <div class="row"><button class="main" type="button" id="again">Ещё раунд</button><button type="button" id="tolevels">К уровням</button></div>
+      <div class="row"><button type="button" id="claim" hidden></button></div>`);
+    BotXP.add("g", PHYS ? "phys" : "math", round.stars);
+    BotXP.button($("claim"), "g", PHYS ? "phys" : "math");
     $("again").onclick = () => start(round.level);
     $("tolevels").onclick = showLevels;
   });
