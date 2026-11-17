@@ -93,7 +93,7 @@ button.main { background: var(--accent); color: var(--accent-ink); }
 
 <main class="wrap" id="game" hidden>
   <div class="top">
-    <button class="back" id="quit">← Назад</button>
+    <button class="back" id="quit">⏹ Закончить</button>
     <div class="hud"><span id="height"></span><span id="score">0</span><span class="lives" id="lives"></span></div>
   </div>
   <div class="task"><span id="label"></span><b id="ask"></b><div class="bar"><i id="time"></i></div></div>
@@ -395,7 +395,7 @@ function home() {
   show("home");
 }
 
-$("quit").addEventListener("click", home);
+$("quit").addEventListener("click", () => state ? finish() : home());  // выйти без трёх проигрышей: очки и опыт сохраняются
 $("menu").addEventListener("click", home);
 
 const loader = document.createElement("script");
