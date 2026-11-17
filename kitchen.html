@@ -89,7 +89,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 
 <main class="wrap" id="game" hidden>
   <div class="top">
-    <button class="back" id="quit">← Назад</button>
+    <button class="back" id="quit">⏹ Закончить</button>
     <div class="hud"><span id="score"></span><span class="lives" id="lives"></span></div>
   </div>
   <div class="task"><span id="num"></span><b id="ask"></b></div>
@@ -351,7 +351,7 @@ $("go").addEventListener("click", start);
 $("again").addEventListener("click", start);
 $("serve").addEventListener("click", serve);
 $("clear").addEventListener("click", () => { state.tiles.forEach(x => { x.used = false; }); state.plate = []; draw(); });
-$("quit").addEventListener("click", home);
+$("quit").addEventListener("click", () => state ? finish() : home());  // выйти без трёх проигрышей: очки и опыт сохраняются
 $("menu").addEventListener("click", home);
 
 const loader = document.createElement("script");
