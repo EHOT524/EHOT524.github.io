@@ -92,7 +92,7 @@ button.main { background: var(--accent); color: var(--accent-ink); }
 
 <main class="wrap" id="game" hidden>
   <div class="top">
-    <button class="back" id="quit">← Темы</button>
+    <button class="back" id="quit">⏹ Закончить</button>
     <div class="hud"><span id="score">0</span><span class="lives" id="lives"></span></div>
   </div>
   <div class="task"><b id="ask"></b><span id="progress"></span></div>
@@ -497,7 +497,6 @@ function start(topic) {
   state = { topic, score: 0, lives: LIVES, combo: 0, level: 0, bubbles: [], errors: new Map(), last: performance.now(), target: null, hintUntil: 0 };
   show("game");
   $("hint").textContent = "";
-  $("quit").textContent = "← Темы";
   newTask();
   cancelAnimationFrame(raf);
   raf = requestAnimationFrame(tick);
@@ -550,7 +549,7 @@ function home() {
 }
 
 $("all").addEventListener("click", () => start("all"));
-$("quit").addEventListener("click", home);
+$("quit").addEventListener("click", () => state ? finish() : home());  // выйти без трёх проигрышей: очки и опыт сохраняются
 $("menu").addEventListener("click", home);
 document.addEventListener("visibilitychange", () => { if (state) state.last = performance.now(); });
 home();
