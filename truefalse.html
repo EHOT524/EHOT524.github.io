@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: верно или нет — 60 секунд на утверждения о формулах и терминах.">
+<title>Верно или нет</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width .25s linear; }
+.bar.low i { background: var(--hit); }
+.stage { min-height: 220px; display: grid; place-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.claim { width: 100%; min-height: 200px; display: grid; align-content: center; gap: 10px; padding: 20px 16px; border-radius: 10px; border: 1px solid var(--line);
+  border-bottom-width: 4px; background: var(--sheet); text-align: center; transition: transform .18s, opacity .18s; }
+.claim span { color: var(--muted); font-size: 13px; }
+.claim b { font-size: 20px; line-height: 1.3; font-weight: 600; }
+.claim .f { font: 500 22px var(--mono); }
+.claim.left { transform: translateX(-40px) rotate(-4deg); opacity: 0; }
+.claim.right { transform: translateX(40px) rotate(4deg); opacity: 0; }
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.answers button { padding: 16px 8px; font-size: 18px; }
+#no { border-color: var(--hit); color: var(--hit); }
+#yes { border-color: var(--good); color: var(--good); }
+.feedback { min-height: 48px; text-align: center; font-size: 14px; color: var(--muted); }
+.feedback b { color: var(--good); }
+.feedback b.bad { color: var(--hit); }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Верно или нет</h1>
+    <p class="lead" style="margin-top:8px">60 секунд. На экране утверждение: формула, термин или название вещества. Верно — жми ✅ или смахни вправо, неверно — ❌ или влево. Ошибка отнимает очко, так что наугад жать невыгодно.</p>
+  </header>
+  <button class="main" id="go">⏱ Начать</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden>Для этого режима утверждений пока нет.</p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="score"></span><span id="clock"></span></div>
+  </div>
+  <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="stage" id="stage"><div class="claim" id="claim"><span id="kind"></span><b id="text"></b></div></div>
+  <div class="answers"><button id="no">❌ Неверно</button><button id="yes">✅ Верно</button></div>
+  <p class="feedback" id="feedback" aria-live="polite"></p>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Время вышло</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="stats"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Разбор ошибок</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button id="claimxp" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, shuffle, cap, plural, subject } = Kit;
+const SECONDS = 60;
+
+// ---------- формулы: разбор и проверка подстановкой чисел (как в «Кухне формул») ----------
+
+const TOKEN = /^\s*(\d+(?:,\d+)?|[A-Za-zА-Яа-яёΑ-Ωα-ωℰ][A-Za-zА-Яа-яё₀-₉ₐₙ]*[²³]?|[·\/+−()])/u;
+const OPS = "·/+−()";
+const isOp = t => OPS.includes(t), isNum = t => /^\d/.test(t), base = t => t.replace(/[²³]$/, "");
+
+function tokenize(src) {
+  const out = [];
+  for (let rest = src; rest.trim(); ) {
+    const m = rest.match(TOKEN);
+    if (!m) return null;
+    out.push(m[1]);
+    rest = rest.slice(m[0].length);
+  }
+  return out;
+}
+
+function evaluate(tokens, vars) {
+  let i = 0;
+  const value = name => { if (!vars.has(name)) vars.set(name, 0.6 + Math.random() * 2.4); return vars.get(name); };
+  const atom = () => {
+    const t = tokens[i++];
+    if (t === undefined) throw new Error("конец");
+    if (t === "(") { const v = sum(); if (tokens[i++] !== ")") throw new Error("скобка"); return v; }
+    if (isOp(t)) throw new Error("знак");
+    if (isNum(t)) return Number(t.replace(",", "."));
+    const power = t.endsWith("²") ? 2 : t.endsWith("³") ? 3 : 1;
+    return value(base(t)) ** power;
+  };
+  const unary = () => tokens[i] === "−" ? (i++, -unary()) : atom();
+  const product = () => { let v = unary(); while (tokens[i] === "·" || tokens[i] === "/") v = tokens[i++] === "·" ? v * unary() : v / unary(); return v; };
+  function sum() { let v = product(); while (tokens[i] === "+" || tokens[i] === "−") v = tokens[i++] === "+" ? v + product() : v - product(); return v; }
+  const v = sum();
+  if (i < tokens.length) throw new Error("лишнее");
+  return v;
+}
+
+function same(a, b) {
+  for (let k = 0; k < 3; k++) {
+    const vars = new Map(), x = evaluate(a, vars), y = evaluate(b, vars);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x - y) > 1e-9 * Math.max(1, Math.abs(x), Math.abs(y))) return false;
+  }
+  return true;
+}
+
+function join(tokens) {
+  let out = "";
+  tokens.forEach((t, k) => {
+    if (t === "(" || t === ")") out += t;
+    else if (isOp(t)) out += (t === "−" && (k === 0 || tokens[k - 1] === "(")) ? "−" : ` ${t} `;
+    else out += t;
+  });
+  return out.replace(/\s+/g, " ").trim();
+}
+
+// Типичные ошибки школьника: перевёрнутая дробь, · вместо /, лишний или забытый квадрат, + вместо −
+function mutate(rhs) {
+  const tries = shuffle([
+    () => { const k = pick(rhs.map((t, i) => i).filter(i => rhs[i] === "/" || rhs[i] === "·")); if (k === undefined) return null; const r = [...rhs]; r[k] = r[k] === "/" ? "·" : "/"; return r; },
+    () => { const k = pick(rhs.map((t, i) => i).filter(i => !isOp(rhs[i]) && !isNum(rhs[i]))); if (k === undefined) return null; const r = [...rhs]; r[k] = r[k] === base(r[k]) ? r[k] + "²" : base(r[k]); return r; },
+    () => { const k = rhs.indexOf("/"); if (k < 1 || isOp(rhs[k - 1]) || isOp(rhs[k + 1] || "(")) return null; const r = [...rhs]; [r[k - 1], r[k + 1]] = [r[k + 1], r[k - 1]]; return r; },
+    () => { const k = pick(rhs.map((t, i) => i).filter(i => i > 0 && (rhs[i] === "+" || rhs[i] === "−"))); if (k === undefined) return null; const r = [...rhs]; r[k] = r[k] === "+" ? "−" : "+"; return r; },
+  ]);
+  for (const f of tries) {
+    const r = f();
+    try { if (r && !same(r, rhs)) return r; } catch {}
+  }
+  return null;
+}
+
+// ---------- утверждения ----------
+
+let BANK = {};
+function buildBank(bank) {
+  const formulas = bank.formulas.map(f => {
+    const cut = f.e.indexOf(" = ");
+    const rhs = cut > 0 && f.e.indexOf(" = ", cut + 1) < 0 ? tokenize(f.e.slice(cut + 3)) : null;
+    let ok = false;
+    try { ok = !!rhs && same(rhs, rhs); } catch {}
+    return { ...f, lhs: cut > 0 ? f.e.slice(0, cut) : "", rhs: ok ? rhs : null };
+  });
+  BANK = { terms: bank.terms, formulas, trivial: bank.trivial };
+  for (const k of Object.keys(BANK)) if (BANK[k].length < 4) delete BANK[k];
+}
+
+// Чужая формула подходит неверным ответом, только если она про другую величину: слева одна буква, и не та же
+const single = lhs => { const t = tokenize(lhs); return !!t && t.length === 1 && !isOp(t[0]) && !isNum(t[0]); };
+
+function near(list, i, fits) {
+  const all = list.map((x, k) => k).filter(k => k !== i && fits(list[k])), close = all.filter(k => Math.abs(k - i) <= 12);
+  const k = pick(close.length ? close : all);
+  return k === undefined ? null : list[k];
+}
+
+const MAKERS = {
+  formulas(truth) {
+    const list = BANK.formulas, i = Math.floor(Math.random() * list.length), f = list[i];
+    const right = `${f.n}: ${f.e}`;
+    if (truth) return { key: "f" + i, kind: "Формула", text: f.n, show: f.e, formula: true, truth, right };
+    let wrong = null;
+    if (f.rhs && Math.random() < 0.7) { const r = mutate(f.rhs); if (r) wrong = `${f.lhs} = ${join(r)}`; }
+    if (!wrong) { const o = near(list, i, x => x.t === f.t && x.e !== f.e && single(x.lhs) && single(f.lhs) && base(x.lhs) !== base(f.lhs) && !f.a.includes(x.e) && !x.a.includes(f.e)); if (o) wrong = o.e; }
+    if (!wrong) return null;
+    return { key: "f" + i, kind: "Формула", text: f.n, show: wrong, formula: true, truth, right };
+  },
+  terms(truth) {
+    const list = BANK.terms, i = Math.floor(Math.random() * list.length), t = list[i];
+    const right = `${cap(t.w)} — ${t.d}`;
+    // «Множество — это множество, все элементы которого входят в другое» звучит почти верно: определение
+    // «подмножества» или «двоичной системы» к «множеству» и «системе счисления» неверным утверждением не берём
+    const related = (a, b) => { a = a.toLowerCase(); b = b.toLowerCase(); return a.includes(b) || b.includes(a); };
+    const d = truth ? t.d : (near(list, i, x => !related(x.w, t.w) && x.d !== t.d) || {}).d;
+    if (!d) return null;
+    return { key: "t" + i, kind: "Термин", text: `${cap(t.w)} — это ${d}`, truth, right };
+  },
+  trivial(truth) {
+    const list = BANK.trivial, i = Math.floor(Math.random() * list.length), t = list[i], name = cap(pick(t.n));
+    const f = truth ? t.f : (near(list, i, x => x.f !== t.f) || {}).f;
+    if (!f) return null;
+    return { key: "v" + i, kind: "Вещество", text: `${name} — это`, show: f, formula: true, truth, right: `${name} — ${t.f}` };
+  },
+};
+
+function claim() {
+  const s = state, kinds = Object.keys(BANK);
+  for (let tries = 0; tries < 50; tries++) {
+    const q = MAKERS[pick(kinds)](Math.random() < 0.5);
+    if (!q || s.used.has(q.key + q.truth)) continue;
+    s.used.add(q.key + q.truth);
+    return q;
+  }
+  s.used.clear();
+  return claim();
+}
+
+// ---------- игра ----------
+
+let state = null, timer = null;
+
+function start() {
+  state = { right: 0, wrong: 0, used: new Set(), errors: [], end: Date.now() + SECONDS * 1000 };
+  $("feedback").textContent = "";
+  Kit.show("game");
+  next();
+  clearInterval(timer);
+  timer = setInterval(tick, 200);
+  tick();
+}
+
+function next() {
+  const s = state, q = s.q = claim(), card = $("claim");
+  card.className = "claim";
+  $("kind").textContent = q.kind;
+  const text = $("text");
+  text.textContent = q.text;
+  if (q.show) {
+    const f = document.createElement("div");
+    f.className = "f";
+    f.textContent = q.show;
+    text.append(f);
+  }
+  draw();
+}
+
+function draw() {
+  const s = state;
+  $("score").textContent = `★ ${Math.max(0, s.right - s.wrong)}`;
+}
+
+function tick() {
+  if (!state) return clearInterval(timer);
+  const left = Math.max(0, state.end - Date.now());
+  $("clock").textContent = `${Math.ceil(left / 1000)} с`;
+  $("fill").style.width = `${100 * left / (SECONDS * 1000)}%`;
+  $("bar").className = left < 10000 ? "bar low" : "bar";
+  if (!left) finish();
+}
+
+function answer(says) {
+  const s = state;
+  if (!s || s.busy) return;
+  const q = s.q, ok = says === q.truth, fb = $("feedback"), mark = document.createElement("b");
+  if (ok) { s.right++; mark.textContent = "✓ Да! "; }
+  else {
+    s.wrong++;
+    mark.className = "bad";
+    mark.textContent = "✗ Нет. ";
+    s.errors.push(q.right);
+    try { navigator.vibrate?.(50); } catch {}
+  }
+  fb.replaceChildren(mark, q.truth ? "Это верно: " + q.right : "Правильно так: " + q.right);
+  $("claim").className = "claim " + (says ? "right" : "left");
+  s.busy = true;
+  setTimeout(() => { if (state) { state.busy = false; next(); } }, 180);
+  draw();
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  clearInterval(timer);
+  const score = Math.max(0, s.right - s.wrong), record = Kit.saveBest("truefalse", score);
+  $("final").textContent = `${score} ${plural(score, "очко", "очка", "очков")}`;
+  $("stats").textContent = `Верно ${s.right}, ошибок ${s.wrong}`;
+  $("best").textContent = record && score ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("truefalse")}`;
+  Kit.list($("errors"), [...new Set(s.errors)]);
+  $("errbox").hidden = !s.errors.length;
+  BotXP.add("t", subject, score);
+  BotXP.button($("claimxp"), "t", subject);
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  clearInterval(timer);
+  const enough = Object.keys(BANK).length > 0;
+  $("go").hidden = !enough;
+  $("none").hidden = enough;
+  $("record").textContent = Kit.best("truefalse") ? `Рекорд: ${Kit.best("truefalse")}` : "";
+  Kit.show("home");
+}
+
+// Смахивание: вправо — верно, влево — неверно
+let touch = null;
+$("stage").addEventListener("pointerdown", e => { touch = { x: e.clientX, y: e.clientY }; });
+$("stage").addEventListener("pointerup", e => {
+  if (!touch) return;
+  const dx = e.clientX - touch.x, dy = e.clientY - touch.y;
+  touch = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) answer(dx > 0);
+});
+document.addEventListener("keydown", e => {
+  if (!state) return;
+  if (e.key === "ArrowRight") answer(true);
+  if (e.key === "ArrowLeft") answer(false);
+});
+$("yes").addEventListener("click", () => answer(true));
+$("no").addEventListener("click", () => answer(false));
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+Kit.loadRef(bank => { buildBank(bank); home(); },
+  () => { $("go").hidden = true; $("none").hidden = false; $("none").textContent = "Не получилось загрузить утверждения. Проверь интернет и открой игру ещё раз."; });
+</script>
+</body>
+</html>
