@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: подбери угол и скорость, чтобы снаряд попал в мишень. Движение тела, брошенного под углом.">
+<title>Попади в цель</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.field { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
+.ctl { display: grid; gap: 6px; }
+.ctl label { display: flex; justify-content: space-between; font-weight: 600; }
+.ctl output { font: 500 16px var(--mono); }
+.ctl .pair { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; align-items: center; }
+.ctl .pair button { padding: 6px 0; font-size: 20px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.info { font-size: 14px; color: var(--muted); }
+.shots { letter-spacing: 3px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Попади в цель</h1>
+    <p class="lead" style="margin-top:8px">Пушка, мишень и, бывает, стена или ветер. Подбери угол и скорость выстрела, чтобы снаряд попал в мишень. На каждую мишень три выстрела: с первого — три звезды. Три промаха подряд — минус жизнь. g = 10 м/с², сопротивления воздуха нет. Ветер в игре упрощённый: он разгоняет снаряд вдоль земли с постоянным ускорением, оно написано на поле.</p>
+  </header>
+  <button class="main" id="go">🎯 Начать</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden>Бросок под углом к горизонту проходят в 10 классе: игра откроется, когда сменишь класс в настройках бота.</p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="score"></span><span class="shots" id="shots"></span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="task"><span id="num"></span><b id="ask"></b></div>
+  <div class="field"><canvas id="cv" width="640" height="400"></canvas></div>
+  <div class="ctl">
+    <label for="angle">Угол <output id="angleOut"></output></label>
+    <div class="pair"><button data-k="angle" data-d="-1" aria-label="меньше угол">−</button><input type="range" id="angle" min="5" max="85" step="1" value="45"><button data-k="angle" data-d="1" aria-label="больше угол">+</button></div>
+    <label for="speed">Скорость <output id="speedOut"></output></label>
+    <div class="pair"><button data-k="speed" data-d="-0.5" aria-label="меньше скорость">−</button><input type="range" id="speed" min="2" max="30" step="0.5" value="12"><button data-k="speed" data-d="0.5" aria-label="больше скорость">+</button></div>
+  </div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+  <div class="row"><button class="main" id="fire">💥 Огонь</button></div>
+  <p class="info" id="info"></p>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Стрельбы окончены</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="count"></p>
+    <p id="best"></p>
+    <p class="note">Дальность на ровном месте: L = υ² · sin 2α / g. Дальше всего летит снаряд под углом 45°, а углы 30° и 60° дают одну и ту же дальность.</p>
+  </section>
+  <div class="row"><button id="claim" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, num, plural } = Kit;
+const G = 10, LIVES = 3, SHOTS = 3, CW = 640, CH = 400;
+const cv = $("cv"), ctx = cv.getContext("2d");
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const rnd = (a, b, step = 1) => a + Math.round(Math.random() * (b - a) / step) * step;
+
+// ---------- уровни ----------
+// Мишень на земле → на возвышении → за стеной → с ветром (постоянное ускорение вдоль земли). Всё в метрах.
+
+function makeTarget(n) {
+  const t = { x: rnd(10, 30), h: 0, w: 1.6, wall: null, wind: 0 };
+  if (n >= 2) t.h = pick([0, rnd(2, 8)]);
+  if (n >= 4 && Math.random() < 0.6) { const wx = rnd(4, Math.max(5, t.x - 4)); t.wall = { x: wx, h: rnd(4, 10) }; }
+  if (n >= 6 && Math.random() < 0.5) t.wind = pick([-2, -1.5, -1, 1, 1.5, 2]);
+  if (n >= 8) t.w = 1.2;
+  t.x = Math.max(t.x, t.wall ? t.wall.x + 3 : 0);
+  return reachable(t) ? t : makeTarget(n);
+}
+
+// Есть ли выстрел из допустимых угла и скорости, который попадает: иначе мишень переставляем
+function reachable(t) {
+  for (let a = 5; a <= 85; a += 1) for (let v = 2; v <= 30; v += 0.5) if (fly(t, a, v).hit) return true;
+  return false;
+}
+
+// Полёт: шагаем по времени, пока снаряд не упал на землю, в стену или в мишень
+function fly(t, angle, speed) {
+  const rad = angle * Math.PI / 180, vx = speed * Math.cos(rad), vy = speed * Math.sin(rad), path = [], dt = 0.01;
+  let x = 0, y = 0, prev = { x, y }, top = 0, cross = null;
+  for (let time = 0; time < 12; time += dt) {
+    x = vx * time + t.wind * time * time / 2;
+    y = vy * time - G * time * time / 2;
+    path.push({ x, y });
+    top = Math.max(top, y);
+    if (t.wall && prev.x < t.wall.x && x >= t.wall.x && y <= t.wall.h) return { path, hit: false, why: "wall", x, top };
+    if (t.wall && prev.x > t.wall.x && x <= t.wall.x && y <= t.wall.h) return { path, hit: false, why: "wall", x, top };
+    // Площадка на высоте снизу непроницаема: снаряд, поднимаясь, врезается в неё
+    if (t.h > 0 && prev.y < t.h && y >= t.h) {
+      const k = (t.h - prev.y) / (y - prev.y), cx = prev.x + (x - prev.x) * k;
+      if (Math.abs(cx - t.x) <= t.w / 2) return { path, hit: false, why: "under", x: cx, top };
+    }
+    // Мишень — площадка шириной w на высоте h: попали, если снаряд опускается на её уровень над площадкой
+    if (prev.y >= t.h && y < t.h && time > dt) {
+      const k = (prev.y - t.h) / (prev.y - y), cx = prev.x + (x - prev.x) * k;
+      if (Math.abs(cx - t.x) <= t.w / 2) return { path, hit: true, x: cx, top };
+      cross = cx;  // где снаряд прошёл уровень мишени: по нему считаем недолёт и перелёт
+    }
+    if (y < 0 && time > dt) return { path, hit: false, why: "ground", x: cross ?? x, top };
+    prev = { x, y };
+  }
+  return { path, hit: false, why: "ground", x: cross ?? x, top };
+}
+
+// ---------- рисунок ----------
+
+let scale = 1;
+function view(t) {
+  const far = Math.max(t.x + 6, 20), high = Math.max(12, (t.wall ? t.wall.h : 0) + 4, t.h + 6);
+  scale = Math.min((CW - 60) / far, (CH - 60) / high);
+}
+const X = x => 30 + x * scale, Y = y => CH - 30 - y * scale;
+
+function drawScene(path = [], ball = null) {
+  const s = state, t = s.t;
+  ctx.clearRect(0, 0, CW, CH);
+  // клетка миллиметровки: шаг 1 м
+  ctx.strokeStyle = css("--grid");
+  ctx.lineWidth = 1;
+  for (let m = 0; X(m) < CW; m++) { ctx.beginPath(); ctx.moveTo(X(m), 0); ctx.lineTo(X(m), Y(0)); ctx.stroke(); }
+  for (let m = 0; Y(m) > 0; m++) { ctx.beginPath(); ctx.moveTo(0, Y(m)); ctx.lineTo(CW, Y(m)); ctx.stroke(); }
+  // подписи через 5 м
+  ctx.fillStyle = css("--muted");
+  ctx.font = "20px " + css("--mono");
+  ctx.textAlign = "center";
+  for (let m = 5; X(m) < CW - 10; m += 5) ctx.fillText(m + " м", X(m), CH - 6);
+  // земля
+  ctx.strokeStyle = css("--ink");
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(CW, Y(0)); ctx.stroke();
+  // стена
+  if (t.wall) {
+    ctx.fillStyle = css("--soft-edge");
+    ctx.fillRect(X(t.wall.x) - 5, Y(t.wall.h), 10, t.wall.h * scale);
+  }
+  // мишень на столбе
+  ctx.fillStyle = css("--muted");
+  if (t.h > 0) ctx.fillRect(X(t.x) - 3, Y(t.h), 6, t.h * scale);
+  ctx.fillStyle = css("--hit");
+  ctx.fillRect(X(t.x - t.w / 2), Y(t.h) - 6, t.w * scale, 6);
+  ctx.fillStyle = css("--sheet");
+  ctx.fillRect(X(t.x) - t.w * scale / 6, Y(t.h) - 6, t.w * scale / 3, 6);
+  // прошлые выстрелы пунктиром
+  ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = css("--muted");
+  ctx.lineWidth = 1.5;
+  for (const old of s.ghosts) line(old);
+  ctx.setLineDash([]);
+  // текущий полёт
+  ctx.strokeStyle = css("--accent");
+  ctx.lineWidth = 2;
+  line(path);
+  // пушка
+  const a = +$("angle").value * Math.PI / 180;
+  ctx.strokeStyle = css("--ink");
+  ctx.lineWidth = 8;
+  ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(0) + 26 * Math.cos(a), Y(0) - 26 * Math.sin(a)); ctx.stroke();
+  ctx.lineCap = "butt";
+  ctx.fillStyle = css("--ink");
+  ctx.beginPath(); ctx.arc(X(0), Y(0), 9, Math.PI, 0); ctx.fill();
+  if (ball) { ctx.fillStyle = css("--accent"); ctx.beginPath(); ctx.arc(X(ball.x), Y(ball.y), 6, 0, 2 * Math.PI); ctx.fill(); }
+  // ветер
+  if (t.wind) {
+    ctx.fillStyle = css("--warn");
+    ctx.font = "600 24px " + css("--body");
+    ctx.textAlign = "right";
+    ctx.fillText(`ветер ${t.wind > 0 ? "→" : "←"} ${num(Math.abs(t.wind))} м/с²`, CW - 12, 30);
+  }
+}
+function line(path) {
+  if (path.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(X(path[0].x), Y(path[0].y));
+  for (const p of path) ctx.lineTo(X(p.x), Y(Math.max(p.y, -0.2)));
+  ctx.stroke();
+}
+
+// ---------- игра ----------
+
+let state = null, anim = 0;
+
+function start() {
+  state = { score: 0, lives: LIVES, round: 0, hits: 0 };
+  Kit.show("game");
+  deal();
+}
+
+function deal() {
+  const s = state;
+  s.t = makeTarget(s.round);
+  s.shot = 0;
+  s.ghosts = [];
+  s.busy = false;
+  s.done = false;
+  const t = s.t, parts = [`до мишени ${t.x} м`];
+  if (t.h) parts.push(`высота ${t.h} м`);
+  if (t.wall) parts.push(`стена высотой ${t.wall.h} м в ${t.wall.x} м от пушки`);
+  if (t.wind) parts.push(`ветер ${t.wind > 0 ? "попутный" : "встречный"}`);
+  $("num").textContent = `Мишень № ${s.round + 1}`;
+  $("ask").textContent = Kit.cap(parts.join(", "));
+  $("hint").textContent = "";
+  $("info").textContent = "";
+  $("fire").textContent = "💥 Огонь";
+  view(t);
+  hud();
+  drawScene();
+}
+
+function hud() {
+  const s = state;
+  $("score").textContent = `★ ${s.score}`;
+  $("shots").textContent = "●".repeat(SHOTS - s.shot) + "○".repeat(s.shot);
+  $("lives").textContent = "❤️".repeat(s.lives) + "🤍".repeat(LIVES - s.lives);
+  $("angleOut").textContent = $("angle").value + "°";
+  $("speedOut").textContent = num(+$("speed").value, 1) + " м/с";
+}
+
+function fire() {
+  const s = state;
+  if (!s || s.busy) return;
+  if (s.done) return s.lives > 0 ? (s.round++, deal()) : finish();
+  const angle = +$("angle").value, speed = +$("speed").value, res = fly(s.t, angle, speed);
+  s.busy = true;
+  s.shot++;
+  hud();
+  let k = 0;
+  const step = () => {
+    k = Math.min(res.path.length, k + 3);
+    drawScene(res.path.slice(0, k), res.path[k - 1]);
+    if (k < res.path.length) anim = requestAnimationFrame(step);
+    else landed(res, angle, speed);
+  };
+  cancelAnimationFrame(anim);
+  anim = requestAnimationFrame(step);
+}
+
+function landed(res, angle, speed) {
+  const s = state;
+  if (!s) return;
+  s.busy = false;
+  const hint = $("hint");
+  $("info").textContent = `Выстрел ${angle}°, ${num(speed, 1)} м/с: наибольшая высота ${num(res.top, 1)} м.`;
+  if (res.hit) {
+    const stars = SHOTS - s.shot + 1;
+    s.score += stars;
+    s.hits++;
+    hint.className = "hint ok";
+    hint.textContent = `🎯 В цель! ${"⭐".repeat(stars)}`;
+    s.done = true;
+  } else {
+    s.ghosts.push(res.path);
+    hint.className = "hint";
+    const miss = res.x - s.t.x;
+    hint.textContent = res.why === "wall" ? "Снаряд врезался в стену: нужна траектория выше." :
+      res.why === "under" ? "Снаряд ударил в мишень снизу: он должен падать на неё сверху." :
+      res.top < s.t.h ? "Снаряд не поднялся до высоты мишени." :
+      miss > 0 ? `Перелёт на ${num(miss, 1)} м` : `Недолёт ${num(-miss, 1)} м`;
+    try { navigator.vibrate?.(50); } catch {}
+    if (s.shot >= SHOTS) {
+      s.lives--;
+      s.done = true;
+      const small = document.createElement("small");
+      small.textContent = "Три промаха: минус жизнь.";
+      hint.append(small);
+    }
+  }
+  $("fire").textContent = s.done ? (s.lives > 0 ? "Следующая мишень →" : "Итоги") : "💥 Огонь";
+  hud();
+  drawScene(res.path);
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  cancelAnimationFrame(anim);
+  const record = Kit.saveBest("cannon", s.score, "all");
+  $("final").textContent = `${s.score} ${plural(s.score, "звезда", "звезды", "звёзд")}`;
+  $("count").textContent = `Сбито мишеней: ${s.hits}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("cannon", "all")}`;
+  BotXP.add("s", "phys", s.score);
+  BotXP.button($("claim"), "s", "phys");
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  cancelAnimationFrame(anim);
+  $("record").textContent = Kit.best("cannon", "all") ? `Рекорд: ${Kit.best("cannon", "all")}` : "";
+  $("go").hidden = Kit.grade < 10;
+  $("none").hidden = Kit.grade >= 10;
+  Kit.show("home");
+}
+
+for (const id of ["angle", "speed"]) $(id).addEventListener("input", () => { if (state && !state.busy) { hud(); drawScene(); } });
+for (const b of document.querySelectorAll("[data-k]")) b.addEventListener("click", () => {
+  const el = $(b.dataset.k);
+  el.value = Math.min(+el.max, Math.max(+el.min, +el.value + +b.dataset.d));
+  el.dispatchEvent(new Event("input"));
+});
+$("fire").addEventListener("click", fire);
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => state && drawScene());
+home();
+</script>
+</body>
+</html>
