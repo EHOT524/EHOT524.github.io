@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: поставь число на числовую прямую — дроби, корни, π и логарифмы.">
+<title>Числовая прямая</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.target { display: grid; place-items: center; min-height: 92px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.target span { color: var(--muted); font-size: 13px; }
+.number { font: 600 34px var(--mono); display: inline-flex; align-items: center; gap: 4px; }
+.fr { display: inline-grid; text-align: center; font-size: 26px; line-height: 1.05; }
+.fr i { font-style: normal; padding: 0 4px; }
+.fr i:first-child { border-bottom: 2px solid currentColor; }
+.line { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 8px 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+svg { display: block; width: 100%; height: 130px; overflow: visible; }
+.axis { stroke: var(--ink); stroke-width: 2; }
+.tick { stroke: var(--ink); stroke-width: 1.5; }
+.minor { stroke: var(--muted); stroke-width: 1; }
+.lab { fill: var(--ink); font: 500 13px var(--mono); text-anchor: middle; }
+.guess { fill: var(--accent); }
+.guess-line { stroke: var(--accent); stroke-width: 2; }
+.truth { fill: var(--good); }
+.truth-line { stroke: var(--good); stroke-width: 2; stroke-dasharray: 4 3; }
+.tlab { fill: var(--good); font: 600 13px var(--mono); text-anchor: middle; }
+.stars { font-size: 22px; letter-spacing: 2px; text-align: center; min-height: 30px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Числовая прямая</h1>
+    <p class="lead" style="margin-top:8px">Где на прямой стоит 5/3? А −2,35? Чем старше класс, тем интереснее числа: корни, π, логарифмы. Нажми на прямую там, где, по-твоему, это число, и жми «Поставить». Чем ближе, тем больше звёзд. Промах дальше чем на десятую часть прямой — минус жизнь.</p>
+  </header>
+  <button class="main" id="go">📏 Начать</button>
+  <p class="note" id="record"></p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="score"></span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="target"><span id="num"></span><div class="number" id="number"></div></div>
+  <div class="line" id="line"><svg id="svg" viewBox="0 0 360 130" preserveAspectRatio="none"></svg></div>
+  <p class="stars" id="stars"></p>
+  <p class="hint" id="hint" aria-live="polite"></p>
+  <div class="row"><button class="main" id="put" disabled>📍 Поставить</button></div>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Прямая пройдена</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="count"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Разбор промахов</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button id="claim" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, shuffle, num, plural, grade } = Kit;
+const LIVES = 3, W = 360, PAD = 20;
+const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+const sup = n => String(n).split("").map(c => SUP[c]).join("");
+const SUB = { 0: "₀", 1: "₁", 2: "₂", 3: "₃", 4: "₄", 5: "₅", 6: "₆", 7: "₇", 8: "₈", 9: "₉" };
+const sub = n => String(n).split("").map(c => SUB[c]).join("");
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const frac = (p, q, sign = "") => `${sign}<span class="fr"><i>${p}</i><i>${q}</i></span>`;
+const gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
+
+// ---------- числа ----------
+// Каждое число: как показать (html), как написать в разборе (text), значение и подсказка, почему оно там
+
+const KINDS = [
+  { g: 7, make() {  // обыкновенная дробь
+    let q, p;
+    do { q = rnd(2, 9); p = rnd(-4 * q, 6 * q); } while (p % q === 0 || gcd(p, q) !== 1);
+    const sign = p < 0 ? "−" : "";
+    return { html: frac(Math.abs(p), q, sign), text: `${sign}${Math.abs(p)}/${q}`, v: p / q, why: `${sign}${Math.abs(p)}/${q} = ${num(p / q, 3)}` };
+  } },
+  { g: 7, make() {  // десятичная дробь
+    const v = rnd(-500, 900) / 100;
+    if (Number.isInteger(v)) return null;
+    return { html: num(v), text: num(v), v, why: `${num(v)} между ${num(Math.floor(v))} и ${num(Math.floor(v) + 1)}` };
+  } },
+  { g: 8, make() {  // корень
+    let n;
+    do { n = rnd(2, 99); } while (Number.isInteger(Math.sqrt(n)));
+    const a = Math.floor(Math.sqrt(n)), neg = Math.random() < 0.2 ? "−" : "";
+    return { html: `${neg}√${n}`, text: `${neg}√${n}`, v: (neg ? -1 : 1) * Math.sqrt(n), why: `${neg}√${n} ≈ ${neg}${num(Math.sqrt(n))}, ведь ${a}² = ${a * a} < ${n} < ${(a + 1) ** 2} = ${a + 1}²` };
+  } },
+  { g: 8, make() {  // a√b
+    const a = rnd(2, 4), b = pick([2, 3, 5, 6, 7]), v = a * Math.sqrt(b);
+    return { html: `${a}√${b}`, text: `${a}√${b}`, v, why: `${a}√${b} = √${a * a * b} ≈ ${num(v)}` };
+  } },
+  { g: 10, make() {  // кубический корень: в пути бота корни n-й степени в 10 классе
+    let n;
+    do { n = rnd(2, 120); } while (Number.isInteger(Math.round(Math.cbrt(n) * 1e6) / 1e6));
+    const a = Math.floor(Math.cbrt(n));
+    return { html: `∛${n}`, text: `∛${n}`, v: Math.cbrt(n), why: `∛${n} ≈ ${num(Math.cbrt(n))}, ведь ${a}³ = ${a ** 3} < ${n} < ${(a + 1) ** 3} = ${a + 1}³` };
+  } },
+  { g: 8, make() {  // степень с отрицательным показателем
+    const b = pick([2, 2, 3, 4, 5, 10]), k = b === 2 ? rnd(1, 3) : 1, v = b ** -k;
+    return { html: `${b}${sup(-k)}`, text: `${b}${sup(-k)}`, v, why: `${b}${sup(-k)} = 1/${b ** k} = ${num(v, 3)}`, small: true };
+  } },
+  { g: 10, make() {  // доля π
+    const q = pick([2, 3, 4, 6]), p = rnd(1, 2 * q - 1);
+    if (gcd(p, q) !== 1) return null;
+    const v = p * Math.PI / q, top = p === 1 ? "π" : `${p}π`;
+    return { html: frac(top, q), text: `${top}/${q}`, v, why: `${top}/${q} ≈ ${p} · 3,14 / ${q} ≈ ${num(v)}` };
+  } },
+  { g: 10, make() {  // log₂
+    let n;
+    do { n = rnd(3, 60); } while (Number.isInteger(Math.log2(n)));
+    const a = Math.floor(Math.log2(n));
+    return { html: `log${sub(2)}${n}`, text: `log₂${n}`, v: Math.log2(n), why: `log₂${n} ≈ ${num(Math.log2(n))}, ведь 2${sup(a)} = ${2 ** a} < ${n} < ${2 ** (a + 1)} = 2${sup(a + 1)}` };
+  } },
+  { g: 10, make() {  // lg
+    const n = pick([2, 3, 5, 20, 30, 50, 200, 300, 500, 2000, 5000]), a = Math.floor(Math.log10(n));
+    return { html: `lg ${n}`, text: `lg ${n}`, v: Math.log10(n), why: `lg ${n} ≈ ${num(Math.log10(n))}, ведь 10${sup(a)} = ${10 ** a} < ${n} < ${10 ** (a + 1)} = 10${sup(a + 1)}` };
+  } },
+];
+const OPEN = KINDS.filter(k => k.g <= grade);
+
+// Кусок прямой вокруг числа: целые концы, число не у самого края
+function windowFor(x) {
+  if (x.small) return { lo: 0, hi: 1, step: 0.1, label: 0.5 };
+  const width = pick(Math.abs(x.v) > 6 ? [5, 10] : [3, 4, 5]);
+  // левый конец целый, и от числа до каждого края не меньше 12% прямой
+  const from = Math.ceil(x.v - 0.88 * width), to = Math.floor(x.v - 0.12 * width);
+  const lo = to >= from ? rnd(from, to) : Math.floor(x.v - width / 2);
+  return { lo, hi: lo + width, step: width <= 5 ? 0.5 : 1, label: 1 };
+}
+
+// ---------- игра ----------
+
+let state = null;
+const toX = v => PAD + (v - state.win.lo) / (state.win.hi - state.win.lo) * (W - 2 * PAD);
+const toV = x => state.win.lo + (x - PAD) / (W - 2 * PAD) * (state.win.hi - state.win.lo);
+
+function start() {
+  state = { score: 0, lives: LIVES, round: 0, errors: [], last: [] };
+  Kit.show("game");
+  deal();
+}
+
+function deal() {
+  const s = state;
+  // Сначала простые числа своего класса, потом всё подряд
+  const kinds = s.round < 3 ? OPEN.slice(0, 2) : OPEN;
+  let x = null;
+  while (!x || s.last.includes(x.text)) x = pick(kinds).make();
+  s.last = [...s.last.slice(-8), x.text];
+  s.x = x;
+  s.win = windowFor(x);
+  s.guess = null;
+  s.done = false;
+  $("num").textContent = `Число № ${s.round + 1}. Где оно на прямой?`;
+  $("number").innerHTML = x.html;
+  $("hint").textContent = "";
+  $("stars").textContent = "";
+  $("put").textContent = "📍 Поставить";
+  draw();
+}
+
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function draw() {
+  const s = state, w = s.win, y = 70, kids = [svgEl("line", { x1: 4, x2: W - 4, y1: y, y2: y, class: "axis" })];
+  kids.push(svgEl("path", { d: `M${W - 4} ${y} l-8 -5 v10 z`, fill: "currentColor", class: "lab" }));
+  const n = Math.round((w.hi - w.lo) / w.step);
+  for (let k = 0; k <= n; k++) {
+    const v = w.lo + k * w.step, x = toX(v), major = Math.abs(v / w.label - Math.round(v / w.label)) < 1e-9;
+    kids.push(svgEl("line", { x1: x, x2: x, y1: y - (major ? 9 : 5), y2: y + (major ? 9 : 5), class: major ? "tick" : "minor" }));
+    if (major) kids.push(svgEl("text", { x, y: y + 28, class: "lab" }, num(v)));
+  }
+  if (s.guess !== null) {
+    const x = toX(s.guess);
+    kids.push(svgEl("line", { x1: x, x2: x, y1: y - 30, y2: y, class: "guess-line" }), svgEl("circle", { cx: x, cy: y - 34, r: 7, class: "guess" }));
+  }
+  if (s.done) {
+    const x = toX(s.x.v);
+    kids.push(svgEl("line", { x1: x, x2: x, y1: y, y2: y + 40, class: "truth-line" }), svgEl("circle", { cx: x, cy: y, r: 6, class: "truth" }),
+      svgEl("text", { x: Math.min(W - 30, Math.max(30, x)), y: y + 56, class: "tlab" }, s.x.text));
+  }
+  $("svg").replaceChildren(...kids);
+  $("score").textContent = `★ ${s.score}`;
+  $("lives").textContent = "❤️".repeat(s.lives) + "🤍".repeat(LIVES - s.lives);
+  $("put").disabled = !s.done && s.guess === null;
+}
+
+function aim(e) {
+  const s = state;
+  if (!s || s.done) return;
+  const box = $("svg").getBoundingClientRect(), x = (e.clientX - box.left) / box.width * W;
+  s.guess = Math.min(s.win.hi, Math.max(s.win.lo, toV(x)));
+  draw();
+}
+
+function put() {
+  const s = state;
+  if (s.done) return s.lives > 0 ? (s.round++, deal()) : finish();
+  if (s.guess === null) return;
+  s.done = true;
+  const err = Math.abs(s.guess - s.x.v) / (s.win.hi - s.win.lo);
+  const stars = err <= 0.02 ? 3 : err <= 0.05 ? 2 : err <= 0.1 ? 1 : 0;
+  s.score += stars;
+  const hint = $("hint");
+  $("stars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  if (stars) {
+    hint.className = "hint ok";
+    hint.textContent = stars === 3 ? "🎯 Точно!" : stars === 2 ? "Близко!" : "Почти";
+  } else {
+    s.lives--;
+    s.errors.push(s.x.why);
+    hint.className = "hint";
+    hint.textContent = "Мимо";
+    try { navigator.vibrate?.(60); } catch {}
+  }
+  const small = document.createElement("small");
+  small.textContent = s.x.why;
+  hint.append(small);
+  $("put").textContent = s.lives > 0 ? "Дальше →" : "Итоги";
+  draw();
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  const record = Kit.saveBest("numline", s.score, "all");
+  $("final").textContent = `${s.score} ${plural(s.score, "звезда", "звезды", "звёзд")}`;
+  $("count").textContent = `Чисел поставлено: ${s.round + (s.done ? 1 : 0)}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("numline", "all")}`;
+  Kit.list($("errors"), s.errors);
+  $("errbox").hidden = !s.errors.length;
+  BotXP.add("n", "math", s.score);
+  BotXP.button($("claim"), "n", "math");
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  $("record").textContent = Kit.best("numline", "all") ? `Рекорд: ${Kit.best("numline", "all")}` : "";
+  Kit.show("home");
+}
+
+let dragging = false;
+$("line").addEventListener("pointerdown", e => { dragging = true; $("line").setPointerCapture(e.pointerId); aim(e); });
+$("line").addEventListener("pointermove", e => { if (dragging) aim(e); });
+$("line").addEventListener("pointerup", () => { dragging = false; });
+document.addEventListener("keydown", e => {
+  const s = state;
+  if (!s || s.done || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+  const d = (s.win.hi - s.win.lo) / 100 * (e.key === "ArrowLeft" ? -1 : 1);
+  s.guess = Math.min(s.win.hi, Math.max(s.win.lo, (s.guess ?? (s.win.lo + s.win.hi) / 2) + d));
+  draw();
+});
+$("put").addEventListener("click", put);
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+home();
+</script>
+</body>
+</html>
