@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: найди пары — термин и определение, формула и её название.">
+<title>Найди пару</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
+.card { position: relative; min-height: 104px; border-radius: 8px; border: 1px solid var(--soft-edge); border-bottom-width: 4px; background: var(--soft);
+  display: grid; place-items: center; padding: 18px 6px 8px; text-align: center; cursor: pointer; font-size: 13px; line-height: 1.25;
+  -webkit-tap-highlight-color: transparent; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; transition: transform .15s; }
+.card.closed { background: repeating-linear-gradient(45deg, var(--soft), var(--soft) 6px, var(--sheet) 6px, var(--sheet) 12px); color: transparent; }
+.card.closed::after { content: "?"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent); font: 700 28px var(--display); }
+.card.open { background: var(--card); border-color: var(--card-edge); transform: scale(1.03); }
+.card.done { background: var(--sheet); border-color: var(--good); color: var(--muted); cursor: default; }
+.card.miss { border-color: var(--hit); }
+.card .kind { position: absolute; top: 4px; left: 0; right: 0; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.card.closed .kind { display: none; }
+.card .f { font: 500 14px var(--mono); }
+.note-line { min-height: 44px; text-align: center; font-size: 14px; color: var(--muted); }
+.note-line b { color: var(--good); }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Найди пару</h1>
+    <p class="lead" style="margin-top:8px">Под карточками спрятаны пары: термин и его определение, формула и её название. Открывай по две карточки. Совпали — пара остаётся открытой. Три раунда, в каждом карточек больше.</p>
+  </header>
+  <button class="main" id="go">🃏 Начать</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden>Для этого режима карточек пока нет.</p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="round"></span><span id="score"></span><span id="clock"></span></div>
+  </div>
+  <div class="board" id="board"></div>
+  <p class="note-line" id="note" aria-live="polite"></p>
+  <div class="row"><button class="main" id="next" hidden>Следующий раунд →</button></div>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Все пары найдены?</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="found"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="learnbox">
+    <h2>Найденные пары</h2>
+    <ul class="errors" id="learn"></ul>
+  </section>
+  <div class="row"><button id="claim" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, shuffle, cap, plural, subject } = Kit;
+const ROUNDS = [4, 5, 6];  // пар в раунде
+
+// ---------- пары из справочника бота ----------
+// Длинные определения на маленькой карточке не прочитать, поэтому берём только короткие
+
+let POOL = [];
+function buildPool(bank) {
+  POOL = [
+    ...bank.terms.filter(t => t.d.length <= 72 && t.w.length <= 32)
+      .map((t, i) => ({ id: "t" + i, a: cap(t.w), ak: "термин", b: cap(t.d), bk: "определение", note: `${cap(t.w)} — ${t.d}` })),
+    ...bank.formulas.filter(f => f.n.length <= 52 && f.e.length <= 28)
+      .map(f => ({ id: "f" + f.id, a: f.n, ak: "название", b: f.e, bk: "формула", formula: true, alts: f.a, note: `${f.n}: ${f.e}` })),
+    ...bank.trivial.map((t, i) => { const n = cap(pick(t.n)); return { id: "v" + i, a: n, ak: "вещество", b: t.f, bk: "формула", formula: true, alts: [], note: `${n} — ${t.f}` }; }),
+  ];
+}
+
+// Пары раунда: тексты на столе не повторяются, и формула одной пары не может быть записью другой
+function dealPairs(n, used) {
+  const out = [], seen = new Set();
+  for (const p of shuffle(POOL.filter(p => !used.has(p.id)).concat(shuffle(POOL)))) {
+    if (out.length === n) break;
+    const keys = [p.a.toLowerCase(), p.b.toLowerCase()];
+    // «граф» и «взвешенный граф», «плотность» и «плотность вещества» на одном столе путают: такие пары не кладём вместе
+    const related = q => { const x = p.a.toLowerCase(), y = q.a.toLowerCase(); return x.includes(y) || y.includes(x); };
+    if (keys.some(k => seen.has(k)) || out.some(q => q.id === p.id || related(q) || (p.alts || []).includes(q.b) || (q.alts || []).includes(p.b))) continue;
+    keys.forEach(k => seen.add(k));
+    out.push(p);
+  }
+  out.forEach(p => used.add(p.id));
+  return out;
+}
+
+// ---------- игра ----------
+
+let state = null, timer = null;
+
+function start() {
+  state = { round: 0, score: 0, found: 0, mistakes: 0, used: new Set(), learned: [], t0: Date.now() };
+  Kit.show("game");
+  deal();
+  clearInterval(timer);
+  timer = setInterval(tick, 500);
+}
+
+function deal() {
+  const s = state, pairs = dealPairs(ROUNDS[s.round], s.used);
+  s.cards = shuffle(pairs.flatMap(p => [{ p, side: "a" }, { p, side: "b" }])).map(c => ({ ...c, open: false, done: false }));
+  s.open = [];
+  s.lock = false;
+  s.left = pairs.length;
+  $("note").textContent = "Открой две карточки";
+  $("next").hidden = true;
+  draw();
+}
+
+function draw() {
+  const s = state;
+  $("board").replaceChildren(...s.cards.map((c, k) => {
+    const el = document.createElement("div"), text = c.side === "a" ? c.p.a : c.p.b, f = c.side === "b" && c.p.formula;
+    el.className = "card " + (c.done ? "done" : c.open ? "open" : "closed") + (c.miss ? " miss" : "");
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-label", c.open || c.done ? text : "закрытая карточка");
+    const kind = document.createElement("span");
+    kind.className = "kind";
+    kind.textContent = c.side === "a" ? c.p.ak : c.p.bk;
+    const body = document.createElement("span");
+    if (f) body.className = "f";
+    body.textContent = text;
+    el.append(kind, body);
+    el.addEventListener("pointerdown", e => { e.preventDefault(); flip(k); });
+    return el;
+  }));
+  $("round").textContent = `${s.round + 1}/${ROUNDS.length}`;
+  $("score").textContent = `★ ${s.score}`;
+}
+
+function tick() {
+  if (!state) return clearInterval(timer);
+  const sec = Math.floor((Date.now() - state.t0) / 1000);
+  $("clock").textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+}
+
+function flip(k) {
+  const s = state, c = s.cards[k];
+  if (!s || s.lock || c.open || c.done) return;
+  c.open = true;
+  s.open.push(c);
+  if (s.open.length === 2) {
+    const [x, y] = s.open;
+    if (x.p === y.p) {
+      x.done = y.done = true;
+      s.open = [];
+      s.found++; s.left--;
+      s.score += 10;
+      s.learned.push(x.p.note);
+      $("note").innerHTML = "";
+      const b = document.createElement("b");
+      b.textContent = "✓ Пара! ";
+      $("note").append(b, x.p.note);
+      if (!s.left) roundDone();
+    } else {
+      s.mistakes++;
+      s.score = Math.max(0, s.score - 2);
+      x.miss = y.miss = true;
+      s.lock = true;
+      $("note").textContent = "Не пара, запоминай, где что лежит";
+      try { navigator.vibrate?.(40); } catch {}
+      setTimeout(() => {
+        if (!state) return;
+        x.open = y.open = x.miss = y.miss = false;
+        s.open = [];
+        s.lock = false;
+        draw();
+      }, 1000);
+    }
+  }
+  draw();
+}
+
+function roundDone() {
+  const s = state;
+  if (s.round + 1 >= ROUNDS.length) return setTimeout(() => state && finish(), 900);
+  $("next").hidden = false;
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  clearInterval(timer);
+  const record = Kit.saveBest("pairs", s.score);
+  const sec = Math.floor((Date.now() - s.t0) / 1000);
+  $("final").textContent = `${s.score} ${plural(s.score, "очко", "очка", "очков")}`;
+  $("found").textContent = `Найдено ${s.found} ${plural(s.found, "пара", "пары", "пар")} за ${Math.floor(sec / 60)} мин ${sec % 60} с, промахов: ${s.mistakes}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("pairs")}`;
+  Kit.list($("learn"), s.learned);
+  $("learnbox").hidden = !s.learned.length;
+  BotXP.add("a", subject, s.found);
+  BotXP.button($("claim"), "a", subject);
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  clearInterval(timer);
+  const enough = POOL.length >= 8;
+  $("go").hidden = !enough;
+  $("none").hidden = enough;
+  $("record").textContent = Kit.best("pairs") ? `Рекорд: ${Kit.best("pairs")}` : "";
+  Kit.show("home");
+}
+
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("next").addEventListener("click", () => { state.round++; deal(); });
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+Kit.loadRef(bank => { buildPool(bank); home(); },
+  () => { $("go").hidden = true; $("none").hidden = false; $("none").textContent = "Не получилось загрузить карточки. Проверь интернет и открой игру ещё раз."; });
+</script>
+</body>
+</html>
