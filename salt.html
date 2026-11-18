@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: собери формулу соли из ионов так, чтобы заряды сошлись.">
+<title>Собери соль</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.beaker { min-height: 120px; display: grid; gap: 8px; align-content: center; justify-items: center; padding: 16px 12px; background: var(--sheet);
+  border: 2px solid var(--soft-edge); border-top: none; border-radius: 0 0 40px 40px; }
+.beaker.ok { border-color: var(--good); }
+.beaker.bad { border-color: var(--hit); }
+.mix { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; min-height: 46px; align-items: center; }
+.charge { font: 500 15px var(--mono); color: var(--muted); }
+.charge.zero { color: var(--good); }
+.shelf { display: grid; gap: 8px; }
+.shelf p { font-size: 13px; color: var(--muted); }
+.ions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ion { min-width: 64px; height: 50px; padding: 0 12px; border-radius: 25px; border: 1px solid var(--card-edge); border-bottom-width: 4px; background: var(--card);
+  color: var(--ink); font: 500 20px var(--mono); cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.ion.an { background: var(--soft); border-color: var(--soft-edge); }
+.mix .ion { height: 40px; min-width: 52px; font-size: 17px; }
+.mix .ion b { font-weight: 600; margin-right: 4px; color: var(--accent); }
+.empty { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Собери соль</h1>
+    <p class="lead" style="margin-top:8px">Тебе называют соль, например «сульфат алюминия». Положи в колбу нужные ионы, и столько каждого, чтобы заряды дали ноль: Al³⁺ и SO₄²⁻ сходятся только как 2 и 3. На полке есть похожие ионы. Ошибка стоит жизни, жизней три.</p>
+  </header>
+  <button class="main" id="go">⚗️ Начать</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden></p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="score"></span><span class="lives" id="lives"></span></div>
+  </div>
+  <div class="task"><span id="num"></span><b id="ask"></b></div>
+  <div class="beaker" id="beaker">
+    <div class="mix" id="mix"></div>
+    <p class="charge" id="charge"></p>
+  </div>
+  <div class="shelf"><p>Катионы</p><div class="ions" id="cats"></div><p>Анионы</p><div class="ions" id="ans"></div></div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+  <div class="row"><button class="main" id="done">✅ Готово</button><button id="clear">Вылить</button></div>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Лаборатория закрыта</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Правильные формулы</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button id="claim" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="chem-tables.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, shuffle, plural } = Kit;
+const LIVES = 3;
+const SUPD = { "¹": 1, "²": 2, "³": 3, "⁴": 4 };
+const charge = ion => { const m = ion.match(/([¹²³⁴]?)[⁺⁻]$/); return (m && m[1] ? SUPD[m[1]] : 1); };
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+// Похожие ионы на полку: их путают чаще всего
+const LOOKALIKE = { SO4: ["SO3", "S"], SO3: ["SO4", "S"], S: ["SO4", "SO3"], NO3: ["NO2"], NO2: ["NO3"], CO3: ["SiO3", "SO3"], SiO3: ["CO3"], PO4: ["SO4", "NO3"],
+  Cl: ["Br", "F"], Br: ["Cl", "I"], I: ["Br", "Cl"], F: ["Cl"], Fe2: ["Fe3"], Fe3: ["Fe2", "Al"], Al: ["Cr3", "Fe3"], Cr3: ["Al", "Fe3"], Cu: ["Zn", "Fe2"],
+  Na: ["K", "Li"], K: ["Na"], Li: ["Na"], Ca: ["Mg", "Ba"], Mg: ["Ca"], Ba: ["Ca"], NH4: ["Na", "K"], Ag: ["Na", "Cu"], Pb: ["Ba", "Zn"], Zn: ["Cu", "Mg"], Mn: ["Fe2", "Mg"] };
+
+// ---------- соли из таблицы растворимости бота ----------
+// Берём только клетки, где вещество существует (не «—» и не пустые), без гидроксидов: это игра про соли
+
+const CAT = Object.fromEntries(CHEM_TABLES.cations.map(c => [c.key, { ...c, q: charge(c.ion) }]));
+const AN = Object.fromEntries(CHEM_TABLES.anions.filter(a => a.key !== "OH").map(a => [a.key, { ...a, q: charge(a.ion) }]));
+const SALTS = [];
+for (const [ak, row] of Object.entries(CHEM_TABLES.cells)) {
+  if (!AN[ak]) continue;
+  for (const [ck, cell] of Object.entries(row)) {
+    if (!CAT[ck] || !cell.f || !["Р", "М", "Н"].includes(cell.v)) continue;
+    const c = CAT[ck], a = AN[ak], g = gcd(c.q, a.q);
+    SALTS.push({ c: ck, a: ak, nc: a.q / g, na: c.q / g, f: cell.f, name: `${a.salt} ${c.name}` });
+  }
+}
+
+// ---------- игра ----------
+
+let state = null;
+
+function start() {
+  state = { score: 0, lives: LIVES, round: 0, errors: [], used: new Set() };
+  Kit.show("game");
+  deal();
+}
+
+function nextSalt() {
+  const s = state;
+  // сначала 1 : 1, потом с одним однозарядным ионом, потом любые
+  const level = s.round < 3 ? x => x.nc === 1 && x.na === 1 : s.round < 6 ? x => x.nc * x.na <= 2 : () => true;
+  let pool = SALTS.filter(x => level(x) && !s.used.has(x.f));
+  if (!pool.length) { s.used.clear(); pool = SALTS.filter(level); }
+  const x = pick(pool);
+  s.used.add(x.f);
+  return x;
+}
+
+function shelf(right, table, n = 3) {
+  const out = [right];
+  for (const k of shuffle(LOOKALIKE[right] || [])) if (table[k] && out.length < 2) out.push(k);
+  for (const k of shuffle(Object.keys(table))) if (out.length < n && !out.includes(k)) out.push(k);
+  return shuffle(out);
+}
+
+function deal() {
+  const s = state;
+  s.salt = nextSalt();
+  s.cats = shelf(s.salt.c, CAT);
+  s.ans = shelf(s.salt.a, AN);
+  s.mix = [];  // [{ key, an, n }]
+  s.done = false;
+  $("num").textContent = `Соль № ${s.round + 1}. Собери:`;
+  $("ask").textContent = Kit.cap(s.salt.name);
+  $("beaker").className = "beaker";
+  $("hint").textContent = "";
+  $("done").textContent = "✅ Готово";
+  $("clear").disabled = false;
+  draw();
+}
+
+function ionButton(key, an, label) {
+  const b = document.createElement("button");
+  b.className = "ion" + (an ? " an" : "");
+  b.innerHTML = label;
+  return b;
+}
+
+function add(key, an) {
+  const s = state;
+  if (s.done) return;
+  const item = s.mix.find(m => m.key === key && m.an === an);
+  if (item) { if (item.n < 4) item.n++; }
+  else s.mix.push({ key, an, n: 1 });
+  draw();
+}
+
+function draw() {
+  const s = state;
+  $("cats").replaceChildren(...s.cats.map(k => { const b = ionButton(k, false, CAT[k].ion); b.onclick = () => add(k, false); return b; }));
+  $("ans").replaceChildren(...s.ans.map(k => { const b = ionButton(k, true, AN[k].ion); b.onclick = () => add(k, true); return b; }));
+  const mix = $("mix");
+  if (!s.mix.length) { const e = document.createElement("span"); e.className = "empty"; e.textContent = "нажимай на ионы, чтобы положить их в колбу"; mix.replaceChildren(e); }
+  else mix.replaceChildren(...s.mix.map((m, k) => {
+    const ion = (m.an ? AN : CAT)[m.key].ion, b = ionButton(m.key, m.an, "");
+    const count = document.createElement("b");
+    count.textContent = m.n + "×";
+    b.append(count, ion);
+    b.setAttribute("aria-label", `убрать один ${ion}`);
+    b.onclick = () => { if (s.done) return; m.n--; if (!m.n) s.mix.splice(k, 1); draw(); };
+    return b;
+  }));
+  const plus = s.mix.filter(m => !m.an).reduce((v, m) => v + m.n * CAT[m.key].q, 0);
+  const minus = s.mix.filter(m => m.an).reduce((v, m) => v + m.n * AN[m.key].q, 0);
+  const el = $("charge");
+  el.textContent = s.mix.length ? `заряд: +${plus} − ${minus} = ${plus - minus > 0 ? "+" : ""}${plus - minus}` : "";
+  el.className = "charge" + (s.mix.length && plus === minus ? " zero" : "");
+  $("score").textContent = `★ ${s.score}`;
+  $("lives").textContent = "❤️".repeat(s.lives) + "🤍".repeat(LIVES - s.lives);
+  $("done").disabled = !s.done && !s.mix.length;
+}
+
+function check() {
+  const s = state;
+  if (s.done) return s.lives > 0 ? (s.round++, deal()) : finish();
+  const x = s.salt, cats = s.mix.filter(m => !m.an), ans = s.mix.filter(m => m.an), hint = $("hint");
+  const plus = cats.reduce((v, m) => v + m.n * CAT[m.key].q, 0), minus = ans.reduce((v, m) => v + m.n * AN[m.key].q, 0);
+  let why = "";
+  if (cats.length !== 1 || ans.length !== 1) why = "В соли один вид катиона и один вид аниона.";
+  else if (cats[0].key !== x.c) why = `В названии «${x.name}» катион ${CAT[x.c].ion}, а не ${CAT[cats[0].key].ion}.`;
+  else if (ans[0].key !== x.a) why = `${Kit.cap(AN[x.a].salt)} — это ${AN[x.a].ion}, а не ${AN[ans[0].key].ion}.`;
+  else if (plus !== minus) why = `Заряды не сходятся: +${plus} и −${minus}.`;
+  else if (cats[0].n !== x.nc) why = "Заряды сходятся, но ионов больше, чем нужно: в формуле самое малое число.";
+  s.done = true;
+  if (!why) {
+    s.score++;
+    $("beaker").className = "beaker ok";
+    hint.className = "hint ok";
+    hint.textContent = `⚗️ Есть! ${x.f}`;
+  } else {
+    s.lives--;
+    const right = `${Kit.cap(x.name)} — ${x.f}: ${x.nc} × ${CAT[x.c].ion} и ${x.na} × ${AN[x.a].ion}, заряд ${x.nc} · (+${CAT[x.c].q}) + ${x.na} · (−${AN[x.a].q}) = 0`;
+    s.errors.push(right);
+    $("beaker").className = "beaker bad";
+    hint.className = "hint";
+    hint.textContent = why;
+    const small = document.createElement("small");
+    small.textContent = right;
+    hint.append(small);
+    try { navigator.vibrate?.(60); } catch {}
+  }
+  $("done").textContent = s.lives > 0 ? "Дальше →" : "Итоги";
+  $("clear").disabled = true;
+  draw();
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  const record = Kit.saveBest("salt", s.score, "all");
+  $("final").textContent = `${s.score} ${plural(s.score, "соль", "соли", "солей")}`;
+  $("best").textContent = record && s.score ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("salt", "all")}`;
+  Kit.list($("errors"), s.errors);
+  $("errbox").hidden = !s.errors.length;
+  BotXP.add("o", "chem", s.score);
+  BotXP.button($("claim"), "o", "chem");
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  $("record").textContent = Kit.best("salt", "all") ? `Рекорд: ${Kit.best("salt", "all")}` : "";
+  Kit.show("home");
+}
+
+$("done").addEventListener("click", check);
+$("clear").addEventListener("click", () => { state.mix = []; draw(); });
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+home();
+</script>
+</body>
+</html>
