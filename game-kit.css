@@ -1,0 +1,54 @@
+/* Общий вид новых игр (пары, верно-неверно, прямая, пушка, замок, соль): те же цвета и шрифты, что у опытов и кухни. */
+:root {
+  --paper: #f5f8fb; --sheet: #ffffff; --ink: #14304d; --muted: #566b80; --line: #d3dde7; --grid: #e6edf4;
+  --accent: #1f5fbf; --accent-ink: #ffffff; --hit: #d3421f; --good: #1d8a5f; --warn: #b26b00;
+  --card: #fff7e6; --card-edge: #e0b56a; --soft: #e8f0fb; --soft-edge: #9db7d6;
+  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c; --grid: #1d2c3a;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --warn: #f0b552;
+  --card: #4a3a1c; --card-edge: #8a6a2c; --soft: #223549; --soft-edge: #46627f;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --paper: #0e1822; --sheet: #15222f; --ink: #e6eef6; --muted: #9db0c2; --line: #2a3b4c; --grid: #1d2c3a;
+  --accent: #6ea8ff; --accent-ink: #0e1822; --hit: #ff8a63; --good: #4fd19c; --warn: #f0b552;
+  --card: #4a3a1c; --card-edge: #8a6a2c; --soft: #223549; --soft-edge: #46627f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 16px 32px; display: grid; gap: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(24px, 6vw, 36px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; }
+h2 { font-size: 16px; font-weight: 500; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; }
+button { font: 600 16px var(--body); padding: 12px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button.main { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: 0.45; cursor: default; }
+.sheet { display: grid; gap: 12px; background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; }
+.back { background: none; border: none; padding: 0; color: var(--accent); font-weight: 600; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hud { display: flex; gap: 14px; align-items: center; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+.lives { letter-spacing: 2px; }
+.task { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px; }
+.task span { color: var(--muted); font-size: 13px; }
+.task b { font-size: 19px; line-height: 1.25; }
+.hint { min-height: 24px; font-weight: 600; text-align: center; color: var(--hit); }
+.hint.ok { color: var(--good); }
+.hint small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.big { font: 700 44px var(--display); }
+.errors { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row button { flex: 1 1 140px; }
+.mono { font-family: var(--mono); }
