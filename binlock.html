@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Игра для школьников: открой замок двоичным кодом — системы счисления и логические операции.">
+<title>Двоичный замок</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="game-kit.css">
+<style>
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width .25s linear; }
+.bar.low i { background: var(--hit); }
+.lock { display: grid; gap: 14px; justify-items: center; padding: 18px 10px; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; }
+.lock.open { border-color: var(--good); }
+.lock.bad { border-color: var(--hit); }
+.code { font: 600 30px var(--mono); text-align: center; }
+.code small { font-size: 16px; }
+.ops { display: grid; gap: 2px; width: 100%; max-width: 460px; }
+.oprow { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 6px; font: 600 22px/1.4 var(--mono); text-align: center; }
+.opsign { position: absolute; right: calc(100% + 2px); top: 0; font: 700 14px/2.2 var(--body); color: var(--accent); white-space: nowrap; }
+.oprow:last-child { border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.bits { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 6px; width: 100%; max-width: 460px; }
+.lock:has(.ops) { padding-left: 34px; padding-right: 34px; }
+.bit { display: grid; gap: 4px; justify-items: center; }
+.bit button { width: 100%; aspect-ratio: 3 / 4; max-height: 76px; padding: 0; font: 700 26px var(--mono); border-radius: 8px; border: 1px solid var(--soft-edge);
+  border-bottom-width: 4px; background: var(--soft); color: var(--muted); }
+.bit button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.bit span { font: 500 12px var(--mono); color: var(--muted); }
+.sum { font: 500 15px var(--mono); color: var(--muted); min-height: 22px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>Двоичный замок</h1>
+    <p class="lead" style="margin-top:8px">Замок открывается кодом из нулей и единиц. Нажимай на биты, чтобы получилось нужное число, и жми «Открыть». Сначала подсказаны веса разрядов, потом их не будет, а дальше пойдут другие системы счисления и логические операции. На всё две минуты, неверная попытка отнимает 5 секунд.</p>
+  </header>
+  <button class="main" id="go">🔐 Начать</button>
+  <p class="note" id="record"></p>
+  <p class="note" id="none" hidden>Системы счисления проходят в 8 классе: игра откроется, когда сменишь класс в настройках бота.</p>
+</main>
+
+<main class="wrap" id="game" hidden>
+  <div class="top">
+    <button class="back" id="quit">⏹ Закончить</button>
+    <div class="hud"><span id="score"></span><span id="clock"></span></div>
+  </div>
+  <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="task"><span id="num"></span><b id="ask"></b></div>
+  <div class="lock" id="lock">
+    <div class="code" id="code"></div>
+    <div class="bits" id="bits"></div>
+    <p class="sum" id="sum"></p>
+  </div>
+  <p class="hint" id="hint" aria-live="polite"></p>
+  <div class="row"><button class="main" id="open">🔓 Открыть</button></div>
+</main>
+
+<main class="wrap" id="over" hidden>
+  <h1>Время вышло</h1>
+  <section class="sheet">
+    <p class="big" id="final"></p>
+    <p id="best"></p>
+  </section>
+  <section class="sheet" id="errbox">
+    <h2>Разбор ошибок</h2>
+    <ul class="errors" id="errors"></ul>
+  </section>
+  <div class="row"><button id="claim" hidden></button></div>
+  <div class="row"><button class="main" id="again">Ещё раз</button><button id="menu">Назад</button></div>
+</main>
+
+<script src="bot-xp.js"></script>
+<script src="game-kit.js"></script>
+<script>
+"use strict";
+const { $, pick, plural, grade } = Kit;
+const SECONDS = 120, PENALTY = 5;
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const bin = (v, n) => v.toString(2).padStart(n, "0");
+const SUB = { 0: "₀", 1: "₁", 2: "₂", 6: "₆", 8: "₈" };
+const sub = n => String(n).split("").map(c => SUB[c]).join("");
+
+// ---------- замки ----------
+// Чем больше открыто, тем сложнее. Логика с 8 класса, восьмеричная и шестнадцатеричная системы с 10 класса и в ЕГЭ.
+
+function makeLock(n) {
+  const kinds = [];
+  if (n < 3) kinds.push("small");
+  else if (n < 6) kinds.push("weights");
+  else {
+    kinds.push("plain", "plain");
+    // как в пути бота: системы счисления и И, ИЛИ, НЕ в 8 классе, исключающее ИЛИ в 10
+    if (grade >= 8) kinds.push("and", "or", "not", "hex", "oct");
+    if (grade >= 10) kinds.push("xor");
+  }
+  const kind = pick(kinds);
+  if (kind === "small") { const v = rnd(1, 15); return { kind, bits: 4, v, weights: true, sum: true, html: `${v}`, ask: "Набери число двоичным кодом" }; }
+  if (kind === "weights") { const v = rnd(16, 255); return { kind, bits: 8, v, weights: true, sum: true, html: `${v}`, ask: "Набери число двоичным кодом" }; }
+  if (kind === "plain") { const v = rnd(20, 255); return { kind, bits: 8, v, html: `${v}`, ask: "Подсказок больше нет: набери число" }; }
+  if (kind === "hex") { const v = rnd(17, 255); return { kind, bits: 8, v, html: `${v.toString(16).toUpperCase()}<small>${sub(16)}</small>`, ask: "Переведи из шестнадцатеричной: каждая цифра — 4 бита" }; }
+  if (kind === "oct") { const v = rnd(9, 255); return { kind, bits: 8, v, html: `${v.toString(8)}<small>${sub(8)}</small>`, ask: "Переведи из восьмеричной: каждая цифра — 3 бита" }; }
+  const a = rnd(1, 255), b = rnd(1, 255);
+  // Операнды рисуются строками над кнопками, цифра над своим битом (rows), а ops — та же запись одной строкой для разбора
+  if (kind === "not") return { kind, bits: 8, v: ~a & 255, rows: [["НЕ", a]], ops: `НЕ ${bin(a, 8)}`, ask: "Инверсия: каждый бит наоборот" };
+  const sign = { and: "И", or: "ИЛИ", xor: "XOR" }[kind], v = kind === "and" ? a & b : kind === "or" ? a | b : a ^ b;
+  const rule = { and: "1, только если в обоих 1", or: "1, если хоть в одном 1", xor: "1, если биты разные" }[kind];
+  return { kind, bits: 8, v, rows: [["", a], [sign, b]], ops: `${bin(a, 8)} ${sign} ${bin(b, 8)}`, ask: `Логическое ${sign}: бит результата ${rule}` };
+}
+
+function explain(l) {
+  const parts = [];
+  for (let k = l.bits - 1; k >= 0; k--) if (l.v >> k & 1) parts.push(2 ** k);
+  const code = bin(l.v, l.bits) + "₂";
+  if (l.ops) return `${l.ops.trim().replace(/\s+/g, " ")} = ${code}`;
+  const from = l.kind === "hex" ? `${l.v.toString(16).toUpperCase()}₁₆ = ${l.v}` : l.kind === "oct" ? `${l.v.toString(8)}₈ = ${l.v}` : `${l.v}`;
+  return `${from} = ${parts.join(" + ") || 0} = ${code}`;
+}
+
+// ---------- игра ----------
+
+let state = null, timer = null;
+
+function start() {
+  state = { opened: 0, errors: [], end: Date.now() + SECONDS * 1000 };
+  Kit.show("game");
+  deal();
+  clearInterval(timer);
+  timer = setInterval(tick, 200);
+  tick();
+}
+
+function deal() {
+  const s = state;
+  s.lock = makeLock(s.opened);
+  s.set = Array(s.lock.bits).fill(0);
+  s.wait = false;
+  const l = s.lock;
+  $("num").textContent = `Замок № ${s.opened + 1}`;
+  $("ask").textContent = l.ask;
+  if (l.rows) {
+    $("code").className = "ops";
+    $("code").replaceChildren(...l.rows.map(([sign, x]) => {
+      const row = document.createElement("div"), label = document.createElement("span");
+      row.className = "oprow";
+      row.style.setProperty("--n", l.bits);
+      label.className = "opsign";
+      label.textContent = sign;
+      row.append(label, ...bin(x, l.bits).split("").map(d => { const c = document.createElement("span"); c.textContent = d; return c; }));
+      return row;
+    }));
+  } else { $("code").className = "code"; $("code").innerHTML = l.html; }
+  $("lock").className = "lock";
+  $("hint").textContent = "";
+  draw();
+}
+
+function value() { return state.set.reduce((v, b) => v * 2 + b, 0); }
+
+function draw() {
+  const s = state, l = s.lock, box = $("bits");
+  box.style.setProperty("--n", l.bits);
+  box.replaceChildren(...s.set.map((b, k) => {
+    const cell = document.createElement("div"), btn = document.createElement("button"), w = document.createElement("span");
+    cell.className = "bit";
+    btn.className = b ? "on" : "";
+    btn.textContent = b;
+    btn.setAttribute("aria-label", `разряд ${2 ** (l.bits - 1 - k)}: ${b}`);
+    btn.addEventListener("pointerdown", e => { e.preventDefault(); if (!s.wait) { s.set[k] ^= 1; draw(); } });
+    w.textContent = l.weights ? 2 ** (l.bits - 1 - k) : "";
+    cell.append(btn, w);
+    return cell;
+  }));
+  $("sum").textContent = l.sum ? `сейчас набрано: ${value()}` : "";
+  $("score").textContent = `🔓 ${s.opened}`;
+}
+
+function tick() {
+  if (!state) return clearInterval(timer);
+  const left = Math.max(0, state.end - Date.now());
+  $("clock").textContent = `${Math.ceil(left / 1000)} с`;
+  $("fill").style.width = `${100 * left / (SECONDS * 1000)}%`;
+  $("bar").className = left < 15000 ? "bar low" : "bar";
+  if (!left) finish();
+}
+
+function tryOpen() {
+  const s = state;
+  if (!s || s.wait) return;
+  const hint = $("hint");
+  if (value() === s.lock.v) {
+    s.opened++;
+    s.wait = true;
+    $("lock").className = "lock open";
+    hint.className = "hint ok";
+    hint.textContent = "🔓 Открыто!";
+    setTimeout(() => state && deal(), 600);
+  } else {
+    s.end -= PENALTY * 1000;
+    s.errors.push(explain(s.lock));
+    $("lock").className = "lock bad";
+    hint.className = "hint";
+    hint.textContent = `Не тот код, −${PENALTY} с`;
+    try { navigator.vibrate?.(60); } catch {}
+    tick();
+  }
+  draw();
+}
+
+function finish() {
+  const s = state;
+  state = null;
+  clearInterval(timer);
+  const record = Kit.saveBest("binlock", s.opened, "all");
+  $("final").textContent = `${s.opened} ${plural(s.opened, "замок", "замка", "замков")}`;
+  $("best").textContent = record && s.opened ? "🏆 Новый рекорд!" : `Рекорд: ${Kit.best("binlock", "all")}`;
+  Kit.list($("errors"), [...new Set(s.errors)]);
+  $("errbox").hidden = !s.errors.length;
+  BotXP.add("l", "info", s.opened);
+  BotXP.button($("claim"), "l", "info");
+  Kit.show("over");
+}
+
+function home() {
+  state = null;
+  clearInterval(timer);
+  $("record").textContent = Kit.best("binlock", "all") ? `Рекорд: ${Kit.best("binlock", "all")}` : "";
+  $("go").hidden = grade < 8;
+  $("none").hidden = grade >= 8;
+  Kit.show("home");
+}
+
+$("open").addEventListener("click", tryOpen);
+$("go").addEventListener("click", start);
+$("again").addEventListener("click", start);
+$("quit").addEventListener("click", () => state ? finish() : home());
+$("menu").addEventListener("click", home);
+home();
+</script>
+</body>
+</html>
